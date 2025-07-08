@@ -1,9 +1,9 @@
 # ArtSim
-A toolbox for modeling and eliminating artifacts caused by electrical stimulation in EEG, LFP, or single-unit recordings.
+A MATLAB toolbox for simulating and eliminating artifacts caused by electrical stimulation in EEG, LFP, or single-unit recordings.
 
 The companion publication provides background, interpretation, and illustrative example simulations:
 
-Artifact Correction for Transcranial Current Stimulation. Bart Krekelberg, 2025.
+ArtSim: Artifact Correction for Transcranial Current Stimulation. Bart Krekelberg, 2025.
 
 _Bart Krekelberg, Rutgers University - Newark, 2025._
 
