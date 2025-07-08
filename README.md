@@ -1,4 +1,4 @@
-# artSim
+# ArtSim
 A toolbox for modeling and eliminating artifacts caused by electrical stimulation in EEG, LFP, or single-unit recordings.
 
 The companion publication provides background, interpretation, and illustrative example simulations:
