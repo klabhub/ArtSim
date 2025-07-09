@@ -3,7 +3,7 @@ A MATLAB toolbox for simulating and eliminating artifacts caused by electrical s
 
 The companion publication provides background, interpretation, and illustrative example simulations:
 
-ArtSim: Artifact Correction for Transcranial Current Stimulation. Bart Krekelberg, 2025.
+Artifact Correction for Transcranial Current Stimulation. Bart Krekelberg, 2025.
 
 _Bart Krekelberg, Rutgers University - Newark, 2025._
 
