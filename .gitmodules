@@ -1,0 +1,7 @@
+[submodule "UMS2K"]
+	path = UMS2K
+	url = https://github.com/klabhub/UMS2K
+	branch = master
+[submodule "fMRIb"]
+	path = fMRIb
+	url = https://github.com/sccn/fMRIb.git

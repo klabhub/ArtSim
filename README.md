@@ -1,11 +1,13 @@
 # ArtSim
 A MATLAB toolbox for simulating and eliminating artifacts caused by electrical stimulation in EEG, LFP, or single-unit recordings.
 
-The companion publication provides background, interpretation, and illustrative example simulations:
+The companion publication (under review) provides background, interpretation, and illustrative example simulations:
 
-Artifact Correction for Transcranial Current Stimulation. Bart Krekelberg, 2025.
+***Artifact Correction for Transcranial Current Stimulation. Bart Krekelberg, 2025.***
+
 
 _Bart Krekelberg, Rutgers University - Newark, 2025._
+[https://vision.rutgers.edu](vision.rutgers.edu)
 
 ## Installation
 This code was developed and tested in MATLAB R2025a, but is backward compatible to R2019b. 
@@ -25,3 +27,15 @@ Then open one of the LiveScripts that produce the main analyses of the companion
 
 ## Funding
 This research was supported by the [National Institute of Neurological Disorders and Stroke](https://www.ninds.nih.gov/) and the [National Institute on Drug Abuse](https://nida.nih.gov/) of the National Institutes of Health under Award Number R01NS120289. The content is solely the responsibility of the author and does not necessarily represent the official views of the National Institutes of Health. The funding institution did not play any role in the study design, data collection and analysis, decision to publish, or preparation of the manuscript. 
+
+
+## Notes
+
+### fmrib_fastr  has a few peculiarities
+
+1. Segmentation: the segments partially overlap  (this is done to allow realignment).
+
+2. When using slice-triggers, the segments used to determine the mean artifact step in
+steps of 2* length of a segment (i.e. skipping one ), when using volume-triggers, the step size is a single segment. (As this changes the effective frequency of the artifact sampling, it afffects which harmonics of the tACS frequency will be removed; see the step parameter in movingAverage.mlx).
+
+3. When using volume-triggers (but not with slice-triggers), the code regresses out the mean (per segment).
