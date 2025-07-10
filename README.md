@@ -10,7 +10,7 @@ _Bart Krekelberg, Rutgers University - Newark, 2025._
 [https://vision.rutgers.edu](vision.rutgers.edu)
 
 ## Installation
-This code was developed and tested in MATLAB R2025a, but is backward compatible to R2019b. 
+This code was developed and tested in MATLAB R2025a, and is backward compatible only to R2021a  (mainly due to the use of arguments blocks in function definitons). 
 To install, clone the repository, _including the submodules_, to your machine :
 ```
 git clone --recurse-submodules https://github.com/klabhub/artSim
