@@ -17,6 +17,7 @@ end
 for i=1:numel(mlxFiles)
     try
         clearvars -except mlxFiles i trgFoldr exportFormats % Avoid out of memory / scope issues
+        name = 
         diary(fullfile(trgFoldr,[extractBefore(mlxFiles(i).name,'.mlx') '.txt']))
         tic
         run(mlxFiles(i).name)
@@ -29,6 +30,8 @@ for i=1:numel(mlxFiles)
             end
         end
         close(figures)
+        clear figures
+        
         toc
         diary off
     catch me
