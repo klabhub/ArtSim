@@ -948,6 +948,8 @@ classdef artSim < handle
                 isAssignedSpike = stay & ismember(spikes.assigns,theNeuron);
                 results(i).ixDetected = ixDetectedSpike(isAssignedSpike);
                 results(i).detectedMs = detectedSpikeMs(isAssignedSpike);
+                results(i).detectedMs(results(i).detectedMs ==0) =1;% Used as an index below ; must be>0.
+
                 results(i).WF         = spikes.waveforms(isAssignedSpike,:)';
                 % Detected but not assigned as "theNeuron":
                 results(i).unassignedWF   = spikes.waveforms(stay & ~ismember(spikes.assigns,theNeuron),:)';
@@ -958,6 +960,7 @@ classdef artSim < handle
 
                 results(i).ixMissed  =  round(o.ixSpike(~results(i).found)*o.recordingSamplingRate/o.quasiContinuousSamplingRate);
                 results(i).missedMs  =  round(1000*o.ixSpike(~results(i).found)/o.quasiContinuousSamplingRate);
+                results(i).missedMs(results(i).missedMs  ==0) =1;% Used as an index below ; must be>0.
                 nrMissed = numel(results(i).missedMs);
                 if nrMissed>0
                     % Extract waveforms of missed spikes using the same
