@@ -2,7 +2,7 @@ function runAll(pv)
 %% Run all mlx files
 % This is intended as a test that all code runs. This will not update the
 % MLX files but does generate regular figures, exports them as pnd and pdf
-% and the command line output from the mlx files is stored ina a txt file.  
+% and the command line output from the mlx files is stored ina a txt file.
 % This output is saved to the trgFolder.
 arguments
     pv.trgFoldr    (1,1) string    = "c:/temp/artsim/";
@@ -19,27 +19,27 @@ for i=1:numel(pv.mlxFiles)
     try
         clearvars -except pv i
         name = extractBefore(pv.mlxFiles(i).name,'.mlx');
-         trgFile = fullfile(pv.trgFoldr,name);
-        if ~exist(trgFile + ".mat" ,'file') || pv.overwrite 
-             fprintf(2,'**************** %s ****************\n',name)      
+        trgFile = fullfile(pv.trgFoldr,name);
+        if ~exist(trgFile + ".mat" ,'file') || pv.overwrite
+            fprintf(2,'**************** %s ****************\n',name)
             diary(trgFile + ".txt");
-        tic
-        run(pv.mlxFiles(i).name)
-        figures = findobj(0,'type','figure');
-        savefig(figures, trgFile); % All figures in one .fig file
-        for exportFormat = pv.exportFormats 
-            for fig =figures'
-                filename = fullfile(pv.trgFoldr,[name get(fig,'Name')]);
-                print(fig,exportFormat,filename);
+            tic
+            run(pv.mlxFiles(i).name)
+            figures = findobj(0,'type','figure');
+            savefig(figures, trgFile); % All figures in one .fig file
+            for exportFormat = pv.exportFormats
+                for fig =figures'
+                    filename = fullfile(pv.trgFoldr,[name get(fig,'Name')]);
+                    print(fig,exportFormat,filename);
+                end
             end
-        end
-        close all 
-        clear figures
-        save(trgFile) % Save state to .mat file nanmed after mlx        
-        toc
-        diary off
+            close all
+            clear figures
+            save(trgFile) % Save state to .mat file nanmed after mlx
+            toc
+            diary off
         else
-             fprintf(2,'**************** %s (Skipped) *******\n',name)      
+            fprintf(2,'**************** %s (Skipped) *******\n',name)
         end
     catch me
         fprintf(2,'\n %s: !!!! %s  !!!! \n',name, me.message)
