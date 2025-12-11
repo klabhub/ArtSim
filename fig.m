@@ -17,6 +17,7 @@ p.addParameter('nrRows',1);
 p.addParameter('height',NaN);
 p.addParameter('name','');
 p.addParameter('colorOrder',defaultColorOrder);
+p.addParameter('span',{});
 p.parse(varargin{:});
 
 
@@ -57,19 +58,29 @@ f.PaperPosition= [f.PaperPosition(1:2) width height];
 
 figure(f);
 %% Create the axes
-nrSubs = p.Results.nrRows*p.Results.nrCols;
+if isempty(p.Results.span)
+    nrSubs = p.Results.nrRows*p.Results.nrCols;
+else
+    nrSubs = numel(p.Results.span);
+end
 layout = tiledlayout(p.Results.nrRows,p.Results.nrCols); %#ok<NASGU>
 for i =1:nrSubs
-    ax(i)=nexttile;
+    if isempty(p.Results.span)
+        ax(i)=nexttile;
+    else
+        ax(i)=nexttile(p.Results.span{i}(1),p.Results.span{i}(2:3));
+    end
     cla(ax(i));
     set(ax(i),'ColorOrder',p.Results.colorOrder);
     hold on;
 end
+
+if isempty(p.Results.span)
 ax = reshape(ax,[p.Results.nrRows p.Results.nrCols]);
 if p.Results.byColumn
     ax= ax';
 end
-
+end
 for i=1:nrSubs
     if nrSubs>1
         thisPos = ax(i).Position;

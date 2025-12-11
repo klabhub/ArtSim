@@ -667,10 +667,11 @@ classdef artSim < handle
                 pv.lowCutOff (1,1) double       = 1 % Hz
                 pv.tag (1,1) string             = ""
                 pv.exportFig (1,1) logical      = false
-                pv.errorThreshold (1,1) double  =1
+                pv.errorThreshold (1,1) double  = 1 % More than 1% error is "forbidden".
                 pv.fillHz (1,1) double          = 1;
                 pv.axs  = []
                 pv.tlim = [0 0.1] + mean(o.tRecord);
+                pv.lineWidth = 2;
             end
 
             if isfield(prms,'tacsFrequency') && prms.tacsFrequency ~=o.tacsFrequency
@@ -734,7 +735,7 @@ classdef artSim < handle
             else
                 axs = pv.axs;
             end
-            if isgraphics(axs(1))
+            if numel(axs)>=1 && isgraphics(axs(1))
                 axes(axs(1)) % Time course
                 yyaxis left  % Truth and recovered signal (small)
                 tStay = o.tRecord >= pv.tlim(1)  &  o.tRecord < pv.tlim(2) ;
@@ -751,7 +752,7 @@ classdef artSim < handle
                 h(1).Color = 'r';
                 h(2).Color = 'g';
                 h(3).Color = 'b';
-                h(1).LineWidth =2;
+                h(1).LineWidth =pv.lineWidth;
                 ylim([-1 1]*max(abs(ylim)))
                 
 
@@ -761,7 +762,7 @@ classdef artSim < handle
                 ylabel 'Amplitude (\muV)'
 
             end
-            if isgraphics(axs(2))
+            if  numel(axs)>=2 && isgraphics(axs(2))
                 axes(axs(2)) % Spectrum
                 yyaxis left  % Truth and recovered signal (small
                 h = plot(frequency,amplitude(:,[1 2])./1e-6,'LineWidth',1,'LineStyle','-');
@@ -788,7 +789,7 @@ classdef artSim < handle
                 xlabel 'Frequency (Hz)'
                 ylabel 'Amplitude (\muV)'
             end
-            if isgraphics(axs(3))
+            if  numel(axs)>=3 && isgraphics(axs(3))
                 axes(axs(3)); % Error as a percentage
                 yyaxis left
                 plot(frequency,pctError,'LineWidth',1,'Color','k');                
