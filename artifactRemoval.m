@@ -156,7 +156,8 @@ p= inputParser;
 p.StructExpand = true;
 p.addParameter('mode',{},@(x)(iscell(x) && all(cellfun(@(z) ismember(z,{'NOP','NOTCH','RBAR','FBAR','FASTR','TC','MEANREMOVAL','PCA','ANC-SEGMENT','ANC-ARTIFACT','ANC-REFERENCE'}),x))));
 p.addParameter('nrCycles',1);
-p.addParameter('tacsFrequency',10);
+p.addParameter('segmentDuration',NaN)
+p.addParameter('tacsFrequency',NaN);
 p.addParameter('autocorrelationWindow',0);
 p.addParameter('recordingSamplingRate',30e3);
 p.addParameter('slack',2e-3);
@@ -184,21 +185,27 @@ doQC = ~isempty(p.Results.groundTruth);
 
 nrSamples = size(v,1);
 samplingRate= p.Results.recordingSamplingRate;
-samplesPerSegment = (samplingRate*p.Results.nrCycles/p.Results.tacsFrequency);
-if samplesPerSegment~=round(samplesPerSegment)
-    fprintf(2,'Non-integer number of samples per segment (%.2f).\n',samplesPerSegment)
+if p.Results.tacsFrequency>0 && isnan(p.Results.segmentDuration)
+    nrSamplesPerSegment = (samplingRate*p.Results.nrCycles/p.Results.tacsFrequency);
+elseif ~isnan(p.Results.segmentDuration)
+    nrSamplesPerSegment =  p.Results.segmentDuration*samplingRate;
+else
+    error('Specify either the number of cycles (of the tACS) or the segmentDuration.')
+end
+if nrSamplesPerSegment~=round(nrSamplesPerSegment)
+    fprintf(2,'Non-integer number of samples per segment (%.2f).\n',nrSamplesPerSegment)
 end
 
-nrSegments = ceil(nrSamples/samplesPerSegment);
-if nrSegments~=nrSamples/samplesPerSegment
-    fprintf(2,'Non-integer number of segments (%.2f).\n',nrSamples/samplesPerSegment);
+nrSegments = ceil(nrSamples/nrSamplesPerSegment);
+if nrSegments~=nrSamples/nrSamplesPerSegment
+    fprintf(2,'Non-integer number of segments (%.2f).\n',nrSamples/nrSamplesPerSegment);
 end
 
 % pad = zeros(samplesPerSegment,1);
 % nrPad = numel(pad);
 % v = [pad; v; pad];
 nrPad=0;
-segmentStart=nrPad+round(1+(0:nrSegments-1)*samplesPerSegment);
+segmentStart=nrPad+round(1+(0:nrSegments-1)*nrSamplesPerSegment);
 [vSegmented,isPadded,nrPre,nrPost] = segment(v,segmentStart);
 
 
@@ -253,7 +260,7 @@ for m=1:nrModes
             shift = nan(1,nrSegments);
             for s =1:nrSegments
                 % Pick samples around the (candidate) start of the segment
-                pickIx = round((segmentStart(s)-slackSamples):(segmentStart(s)+samplesPerSegment-slackSamples));
+                pickIx = round((segmentStart(s)-slackSamples):(segmentStart(s)+nrSamplesPerSegment-slackSamples));
                 pickIx(pickIx<1)=[];
                 pickIx(pickIx>nrSamples)=[];
                 candidate = unSegmentedVClean(pickIx);
@@ -279,10 +286,10 @@ for m=1:nrModes
             vClean = notch(unSegment(vClean,isPadded,nrPre,nrPost));
             vClean = segment(vClean,segmentStart);
         case 'MEANREMOVAL'
-            % To inlcude only segments where the underlying neural signal is assumed to
+            % To include only segments where the underlying neural signal is assumed to
             % be uncorrelated; adjacent artifacts are not used but one or more are
             % skipped (step), depending on the assumed autocorrelationWindow
-            step = 1+ceil(p.Results.autocorrelationWindow*samplingRate/samplesPerSegment);
+            step = 1+ceil(p.Results.autocorrelationWindow*samplingRate/nrSamplesPerSegment);
             halfWindow = p.Results.nrSegsPerWindow;
             meanArtifact = nan(size(vClean));
             removeMeanPerSeg = 0 ; % Set this to true to regress out the mean of each segment too. Not recommended (depending on the nrCycles used, this will also remove low frequency signals)
@@ -339,7 +346,7 @@ for m=1:nrModes
 
         case 'PCA'
             halfPCAWindow = min(p.Results.pcaNrSegsPerWindow,nrSegments);
-            step = 1+ceil(p.Results.autocorrelationWindow/1000*samplingRate/samplesPerSegment);
+            step = 1+ceil(p.Results.autocorrelationWindow/1000*samplingRate/nrSamplesPerSegment);
             pcaArtifact =zeros(size(vClean));
             cumVarExplained = zeros(1,nrSegments);
             nrPC = zeros(1,nrSegments);
@@ -465,8 +472,7 @@ for m=1:nrModes
             % at least we see the full result.
             lpf = 0;
             L = 1;  % "Interpolation folds" = upsampling. We are already at 10kHz so not needed.
-            Window = 2*p.Results.nrSegsPerWindow; % Number of segments to average for one template.
-            nrSamplesPerSegment = ceil(samplingRate*p.Results.nrCycles/p.Results.tacsFrequency);
+            Window = 2*p.Results.nrSegsPerWindow; % Number of segments to average for one template.            
             % The realignment algorithm needs time before the first and after the last
             % trigger to work.
             pad = zeros(1,nrSamplesPerSegment); %

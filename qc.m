@@ -22,7 +22,7 @@ end
 
 x= x(:);
 truth=truth(:);
-if ~isnan(tacsFreq)
+if ~isnan(tacsFreq) && tacsFreq ~=0
     % Remove the tacsFreq from consideration
     x= FBAR(x,tacsFreq,sf);
     truth = FBAR(truth,tacsFreq,sf);    

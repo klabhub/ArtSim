@@ -77,6 +77,6 @@ for i=1:nrSubs
         thisPos(2) = thisPos(2) + 0.95*thisPos(4);
         thisPos(3) = 0.1;
         thisPos(4) = 0.1;
-        annotation('textbox',thisPos,'String',[char('a'+i-1) ')'],'Linestyle','none')
+        annotation('textbox',thisPos,'String',[char('a'+i-1) ')'],'Linestyle','none','FontName',get(groot,'defaultAxesFontName'))
     end
 end

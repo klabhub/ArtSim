@@ -6,7 +6,7 @@ function runAll(pv)
 % This output is saved to the trgFolder.
 arguments
     pv.trgFoldr    (1,1) string    = "c:/temp/artsim/";
-    pv.exportFormats  (1,:) string  = ["-dpng" "-dpdf"];
+    pv.exportFormats  (1,:) string  = ["eps" "pdf"];
     pv.mlxFiles      struct = dir('*.mlx');
     pv.overwrite (1,1) logical = false
 end
@@ -28,9 +28,9 @@ for i=1:numel(pv.mlxFiles)
             figures = findobj(0,'type','figure');
             savefig(figures, trgFile); % All figures in one .fig file
             for exportFormat = pv.exportFormats
-                for fig =figures'
-                    filename = fullfile(pv.trgFoldr,[name get(fig,'Name')]);
-                    print(fig,exportFormat,filename);
+                for fg =figures'
+                    filename = fullfile(pv.trgFoldr,[name get(fg,'Name')]);
+                    exportgraphics(fg,filename + "." + exportFormat,contentType='vector',Colorspace="rgb",PreserveAspectRatio="on",Resolution=600)                    
                 end
             end
             close all

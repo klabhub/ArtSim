@@ -1,7 +1,7 @@
 classdef artSim < handle
-    % artSim  A Matlab handle class to simulate electrophysiological recordings
-    % , investigate the influence of artifacts induced by electrical
-    % stimulation and test artifact removal algorithms.
+    % artSim  A Matlab handle class to simulate electrophysiological 
+    % recordings, investigate the influence of artifacts induced by electrical
+    % stimulation, and test artifact removal algorithms.
     %
     % By default class members are set to have "no influence". E.g, a
     % a spike/lfp/tacs amplitude of 0, a 1000V linear amplification
@@ -10,22 +10,34 @@ classdef artSim < handle
         reproducible              = false;    % Set to true to reset the RNG to default before each simulation.
         % Set it to a nonnegative integer to use that as a seed.
 
-        duration                  = 10;       % [s] Duration of the recording to simulate.
+        duration                  = 120;       % [s] Duration of the recording to simulate.
 
         recordingSamplingRate     = 30e3;     % [Hz] Sampling rate of the recording device
         stimulatorSamplingRate    = 2e3;      % [Hz] Sampling rate of the tACS stimulator
         currentResolution         = 1e-6;     % [A] Current resolution of the stimulator.
+        highPass                  = 0;        % [Hz] Highpass cutoff of the pre-amplification hardware filter.
+
+        % tACS
         tacsAmplitude             = 0;        % [A] Current amplitude
         tacsPhaseOffset           = 0;        % [Rad] Current phase
         tacsFrequency             = 0;        % [Hz] Current frequency
         tacsShape                 = 'sine';   % ['sine'] {'sine','sawtooth','square'}
+        % tDCS
+        tdcsMean                  = 0;       % [A] Current
+        % Ramp (applied to both tACS and tDCS)
+        tcsRamp                  = 0;       % [s] Duration of the on and offset ramp.
 
         resistance                = 1;        % [Ohm] Effective resistance at the recording site.
 
-        % Simulating periodic resistance changes as caused by heartbeat or respiration
-        heartbeatFrequency        = 0;        % [Hz]
-        heartbeatAmplitude        = 0;        % [fraction of the resistance]
-        heartbeatDuration         = 0.25      % [s] - boxcar
+        % Simulating periodic resistance changes as caused by physiological changes such as heartbeats or respiration
+        % The default implementation uses a periodic sinusoidal or
+        % pulse-like shape, but the user can specify any zFun to simulate
+        % more complex shapes (see zHeartbeat.m for an example)
+        zFrequency        = 0;        % [Hz]
+        zAmplitude        = 0;        % [fraction of the resistance]
+        zDuration         = 0.25      % [s] - Full width at half max.
+        zVariability      = 0;        % [fraction of heartbeat frequency per *hour*]
+        zFun             = []         % Function that returns the impedance at each timepoint.
 
         % Spikes
         spikePeak                 = 0;        % [V] Peak of the action potential
@@ -64,17 +76,16 @@ classdef artSim < handle
         vSpike;     % The extracellular voltage produced by the spikes
         vSpikeNeighbor; % The extracellular voltage produced by (other) spikes at a neighboring electrode.
         lfp;        % The LFP at the electrode of interest.
-        vTacs;      % The nominal voltage created by the tACS. (on the tACS stimulator clock)
-        vTacsActual % The voltage created by the tACS (includes discretization and impedance artifacts)
+        vTcsActual % The voltage created by the TCS (includes discretization and impedance artifacts)
         tRecord;     % The time of each sample
 
         vRecord;    % The recorded voltage - including the artifact. First column is without artifact , second column with.
         vRecordNeighbor; % The recorded voltage at the "neighboring" electrode.First column is without artifact, second column with.
-        vRecordTacs; % The recorded tACS voltage (at the recording sampling rate).
+        vRecordTcs; % The recorded TCS voltage (at the recording sampling rate).
     end
 
     properties (Dependent)
-        tTacs       % The time of each stimulator sample
+        tTcs       % The time of each stimulator sample
         nrSamples;  % The number of simulated recorded samples
         nrTimePoints; % The number of simulated time points
         phaseLfp;   % The phase of the LFP at each time point.
@@ -106,7 +117,7 @@ classdef artSim < handle
         end
 
         function v = get.phaseTacs(o)
-            v = artSim.phase(o.vRecordTacs);
+            v = artSim.phase(o.vRecordTcs);
         end
         function v = get.nrSpikes(o)
             v= numel(o.ixSpike);
@@ -121,7 +132,7 @@ classdef artSim < handle
             % Returns the recorded voltage including all artifacts
             v = o.vRecord(:,2);
         end
-        function v= get.tTacs(o)
+        function v= get.tTcs(o)
             % Returns the simulated time points (at the stimulator sampling
             % rate)
             v = (0:1/o.stimulatorSamplingRate:(o.duration-1/o.stimulatorSamplingRate))';
@@ -165,10 +176,21 @@ classdef artSim < handle
             o.tSimulate = (0:1/o.quasiContinuousSamplingRate:(o.duration-1/o.quasiContinuousSamplingRate))';
             o.vRecord = zeros(o.nrSamples,2);
             o.vRecordNeighbor = zeros(o.nrSamples,2);
-            o.vRecordTacs = zeros(o.nrSamples,1);
+            o.vRecordTcs = zeros(o.nrSamples,1);
         end
-        function o = artSim
+        function o = artSim(prms)
             %artSim Construct an artSim instance
+            arguments
+                prms (1,1) struct = struct; % Parameter settings.
+            end
+            if ~isempty(prms)
+                % Must be a struct with field names that match properties
+                % of the artSim class.
+                fn = fieldnames(prms);
+                for p=1:numel(fn)
+                    o.(fn{p}) = prms.(fn{p});
+                end
+            end           
             reset(o);
         end
 
@@ -206,21 +228,53 @@ classdef artSim < handle
             %   lfp
             %   lfpPhase
             if o.lfpAmplitude ==0;return;end
-            if o.lfpPeakWidth ==0
-                % Simulate an LFP as a single sinusoid.
-                o.lfp = o.lfpAmplitude*sin(2*pi*o.tSimulate*o.lfpFrequency+o.lfpPhaseOffset);
-            else
-                frequencyResolution = 0.05;
-                sdRange = 3;
-                tmpLfp = zeros(size(o.tSimulate));
-                for f=o.lfpFrequency+(-sdRange*o.lfpPeakWidth:frequencyResolution:sdRange*o.lfpPeakWidth)
-                    scale = exp(-((f-o.lfpFrequency)/o.lfpPeakWidth).^2);
-                    phase = 2*pi*rand;
-                    tmpLfp = tmpLfp + o.lfpAmplitude.*scale.*sin(2*pi*o.tSimulate*f+phase);
+            thisLfp = zeros(size(o.tSimulate));
+            nrOscillations= max([numel(o.lfpAmplitude) numel(o.lfpPeakWidth) numel(o.lfpPhaseOffset) numel(o.lfpFrequency)]);
+            if isscalar(o.lfpAmplitude);o.lfpAmplitude = o.lfpAmplitude*ones(1,nrOscillations);end
+            if isscalar(o.lfpPeakWidth);o.lfpPeakWidth= o.lfpPeakWidth*ones(1,nrOscillations);end
+            if isscalar(o.lfpPhaseOffset);o.lfpPhaseOffset = o.lfpPhaseOffset*ones(1,nrOscillations);end
+            if isscalar(o.lfpFrequency);o.lfpFrequency= o.lfpFrequency*ones(1,nrOscillations);end
+
+            for i=1:nrOscillations
+                if o.lfpPeakWidth(i) ==0
+                    % Single oscillation .
+                    thisLfp = thisLfp +  o.lfpAmplitude(i)*sin(2*pi*o.tSimulate*o.lfpFrequency(i)+o.lfpPhaseOffset(i));
+                else
+                    % Oscillation with frequency spread
+                    % Construct Frequency Vector (0 to Nyquist)
+                    if rem(o.nrTimePoints,2)==0
+                        % Even number of samples. Nyquist is the highest one
+                        frequencies = ([0 1:o.nrTimePoints/2 (o.nrTimePoints/2-1):-1:1]*o.quasiContinuousSamplingRate/o.nrTimePoints)';
+                    else
+                        % Odd number of samples. Nyquist is not in the set.
+                        frequencies = ([0 1:(o.nrTimePoints-1)/2 (o.nrTimePoints-1)/2:-1:1]*o.quasiContinuousSamplingRate/o.nrTimePoints)';
+                    end
+                    [~,highestFrequencyIx] =max(frequencies);
+                    % Select the lower half
+                    keep = 1:highestFrequencyIx;
+                    frequencies = frequencies(keep);
+
+
+                    amplitude = o.lfpAmplitude(i) * exp(-((frequencies - o.lfpFrequency(i))/o.lfpPeakWidth(i)).^2);
+                    phase = exp(1i * (2*pi*rand(size(frequencies)) - pi));
+                    spectrum_half = amplitude .* phase;
+                    % Enforce Real Signal Constraints (DC must be real, Nyquist real)
+                    spectrum_half(1) = 0; % Eliminate DC offset
+                    if mod(o.nrTimePoints,2) == 0
+                        spectrum_half(end) = real(spectrum_half(end));
+                    end
+                    % G. Create Full Two-Sided Spectrum (Conjugate Symmetry)
+                    if mod(o.nrTimePoints,2) == 0
+                        spectrum = [spectrum_half; conj(fliplr(spectrum_half(2:end-1)))];
+                    else
+                        spectrum = [spectrum_half; conj(fliplr(spectrum_half(2:end)))];
+                    end
+                    thisLfp = thisLfp + ifft(o.nrTimePoints/2*sqrt(frequencies(3)-frequencies(2))*spectrum, 'symmetric'); % 'symmetric' ensures real output
                 end
-                o.lfp  = tmpLfp;
             end
+            o.lfp  = thisLfp;
         end
+
 
         function simSpikes(o,pv)
             % simSpikes  - Generate a voltage trace representing the extracellular potential of spikes.
@@ -360,14 +414,17 @@ classdef artSim < handle
             end
         end
 
-        function simtACS(o,pv)
-            % simtACS - compute the stimulation voltage
+        function simTCS(o,pv)
+            % simTCS - compute the stimulation voltage
             %
             % Object properties used:
             % tacsAmplitude  - Amplitude of the sinusoid [A]
             % tacsFrequency   - Frequency of stimulation [Hz]
             % tacsPhaseOffset     - Phase at time 0. [rad]
             % tacsShape    - sine,sawtooth, square
+            % tdcsMean   -  Mean current [A]
+            % tdcsRamp   - Duration of a ramp [s]
+            %
             % resistance - Effective resistance of the path between stimulation
             %               electrode and the recording site.
             % stimulatorSamplingRate - Sampling rate of the stimulation device [Hz]
@@ -378,8 +435,8 @@ classdef artSim < handle
             % showTime - Show the first seconds of stimulation in the graph [2]
             %
             % COMPUTES
-            % tacsV =  Voltage as generated by the stimulator (sampled at .stimulatorSamplingRate)
-            % tacsT =  Corresponding times  (sampled at .stimulatorSamplingRate)
+            % vTcsActual =  Voltage as generated by the stimulator (sampled at .stimulatorSamplingRate)
+
             arguments
                 o (1,1) artSim
                 pv.graph (1,1) logical =false
@@ -389,70 +446,91 @@ classdef artSim < handle
             % Determine the output
             switch upper(o.tacsShape)
                 case 'SINE'
-                    virtualOutputCurrent = o.tacsAmplitude*sin(2*pi*o.tacsFrequency*o.tTacs+o.tacsPhaseOffset);
+                    virtualOutputCurrent = o.tacsAmplitude*sin(2*pi*o.tacsFrequency*o.tTcs+o.tacsPhaseOffset);
                 case 'SAWTOOTH'
                     % Sawtooth - with sine-phase (i.e. 0 at 0).
-                    virtualOutputCurrent = o.tacsAmplitude*sawtooth(2*pi*o.tacsFrequency*o.tTacs+o.tacsPhaseOffset+pi);
+                    virtualOutputCurrent = o.tacsAmplitude*sawtooth(2*pi*o.tacsFrequency*o.tTcs+o.tacsPhaseOffset+pi);
                 case 'SQUARE'
-                    virtualOutputCurrent = o.tacsAmplitude*(sin(2*pi*o.tacsFrequency*o.tTacs+o.tacsPhaseOffset)>0);
+                    virtualOutputCurrent = o.tacsAmplitude*(sin(2*pi*o.tacsFrequency*o.tTcs+o.tacsPhaseOffset)>0);
+                case 'NONE'
+                    virtualOutputCurrent = zeros(1,numel(o.tTcs));
                 otherwise
                     error('Unknown tACS shape %s',o.tacsShape);
             end
+
+            if o.tdcsMean~=0
+                virtualOutputCurrent = virtualOutputCurrent + o.tdcsMean*ones(numel(o.tTcs),1);
+            end
+            if o.tcsRamp >0
+                inRamp = o.tTcs <= o.tcsRamp;
+                nrRampSamples= find(inRamp,1,'last');
+                scale = [linspace(0,1,nrRampSamples)'; ones(numel(o.tTcs)-2*nrRampSamples,1); linspace(1,0,nrRampSamples)'];
+            else
+                scale =1;
+            end
             % Model the discretization of the DA conversion in the device
-            I = o.currentResolution*round(virtualOutputCurrent./o.currentResolution);
+            I = o.currentResolution*round(scale.*virtualOutputCurrent./o.currentResolution);
 
             % The stimulator applies this current to the scalp and that ultimately results
             % in a voltage difference between the intracranial electrode near the neuron of
             % interest, and a reference electrode. For simplicity we assume that this involves
             % no nonlinear changes (i.e. everything is purely ohmic).
             % Store the voltage.
-            o.vTacs = I.*o.resistance;
-
+            V = I.*o.resistance;
 
             % The stimulator updates its value with stimulatorSamplingRate; values are
             % constant in between. Create a v that reflects this discrete
             % nature of the stimulation
-            o.vTacsActual= interp1(o.tTacs,o.vTacs,o.tSimulate,"previous","extrap");
+            o.vTcsActual= interp1(o.tTcs,V,o.tSimulate,"previous","extrap");
 
-
-            if o.heartbeatAmplitude >0
-                if o.tacsFrequency/o.heartbeatFrequency == round(o.tacsFrequency/o.heartbeatFrequency)
+            if isa(o.zFun,'function_handle')
+                % User-supplied function, pass the object
+                z = o.zFun(o);
+            elseif o.zAmplitude >0
+                % Simulate a rhtyhm
+                if o.tacsFrequency>0 && o.tacsFrequency/o.zFrequency == round(o.tacsFrequency/o.zFrequency)
                     fprintf(2,'Heartbeat is effectively locked to tACS - this is not a good simulation of a heartbeat... (use a frequency that is not a multiple of the tACS frequency)\n');
                 end
-                if o.heartbeatDuration ==0
-                    % Simulate a periodic "breathing" that changes the resistance - Pure sinusoid
-                    y = o.heartbeatAmplitude.*sin(2*pi*o.heartbeatFrequency*o.tSimulate);
-                else
-                    % % Simulate a periodic ballistic "heartbeat" that changes the
-                    % resistance - pulses
-                    tSingleBeat = o.tSimulate(o.tSimulate<1/o.heartbeatFrequency);
-                    ySingleBeat = zeros(size(tSingleBeat));
-                    ySingleBeat(tSingleBeat<o.heartbeatDuration) = o.heartbeatAmplitude;
-                    y = repmat(ySingleBeat,[ceil(numel(o.tSimulate)/numel(tSingleBeat)) 1]);
-                    y = y(1:numel(o.tSimulate));
+                % Simulate a periodic "breathing/heartbeat" that changes the resistance - Pure sinusoid
+                % Or with some long-term variability on a scale of 1 hour.
+                frequency = o.zFrequency*(1+o.zVariability*sin(2*pi*(1/3600)*o.tSimulate));
+                z = sin(2*pi*frequency.*o.tSimulate);
+                if o.zDuration >0
+                    % Create bumps with a given FWHM by raising the sine to
+                    % a power of n
+                    n = (-log(2)/log(cos(pi*o.zFrequency*o.zDuration)));
+                    z(z<0) = 0;
+                    z= z.^n;
+                    z = z./max(z);
                 end
-                o.vTacsActual = o.vTacsActual.*(1+y);
+                z = 1+ o.zAmplitude.*z;
+            else
+                z= 1;
             end
+
+            o.vTcsActual = o.vTcsActual.*z;
+
 
 
             %% Show a summary graph
             if pv.graph
                 clf;
                 subplot(3,1,1)
-                plot(o.tTacs,I*1000)
+                plot(o.tTcs,I*1000)
                 xlabel ('Time (s)')
                 ylabel 'Current (mA)'
                 title('Stimulator Output Current');
                 subplot(3,1,2)
-                plot(o.tTacs,I*1000)
+                plot(o.tTcs,I*1000)
                 xlim([0 pv.showTime]);
                 xlabel ('Time (s)')
                 ylabel 'Current (mA)'
                 title('Zoomed view');
 
                 subplot(3,1,3)
-                [ft,frequency]= fftReal(o.vTacsActual(:),o.quasiContinuousSamplingRate);
-                amplitude = abs(ft)/(numel(o.vTacsActual)/2);
+                [ft,frequency]= fftReal(o.vTcsActual(:),o.quasiContinuousSamplingRate);
+                amplitude = abs(ft)/(numel(o.vTcsActual)/2);
+                amplitude(1)= 0; % Remove DC
                 [maxAmp,maxIx] = max(amplitude);
                 plot(frequency,amplitude./maxAmp);
                 xlabel 'Frequency (Hz)'
@@ -488,9 +566,14 @@ classdef artSim < handle
                 pv.showTime (1,1) double = 2
             end
 
-            % Store the recorded vTacs  (assuming that this is recorded by
-            % a linear adc).
-            o.vRecordTacs = decimate(o.vTacsActual,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
+            % Store the recorded vTcs assuming a linear amplifier, with a
+            % highpass filter
+            if o.highPass >0
+                highPassFiltered  = highpass(o.vTcsActual,o.highPass,o.quasiContinuousSamplingRate);
+            else
+                highPassFiltered = o.vTcsActual;
+            end
+            o.vRecordTcs = decimate(highPassFiltered,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
 
             %Add artifact, neural signal, and noise
             if o.pinkNoise
@@ -507,14 +590,18 @@ classdef artSim < handle
                     simV = o.vNeural;
                 end
                 % Create two signals; 1 -> without tacs (.vTruth), 2-> with tACS
-                simV = simV +additiveNoise + [zeros(size(simV)) o.vTacsActual.*(1+multiplicativeNoise)];
+                simV = simV +additiveNoise + [zeros(size(simV)) o.vTcsActual.*multiplicativeNoise];
 
                 % The recording hardware will filter this quasi continouous
-                % signal before amplification/sampling. Here we only model
-                % the anti-aliasing filter built-in to decimate.
-
+                % signal before amplification/sampling. Here we model a
+                % high pass hardware filter and an anti-aliasing filter (inside decimate).
                 for j=1:size(simV,2)
-                    recV(:,j) = decimate(simV(:,j),o.quasiContinuousSamplingRate/o.recordingSamplingRate);
+                    if o.highPass >0
+                        highPassFiltered  = highpass(simV(:,j),o.highPass,o.quasiContinuousSamplingRate);
+                    else
+                        highPassFiltered  = simV(:,j);
+                    end
+                    recV(:,j) = decimate(highPassFiltered,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
                 end
                 % Amplification
                 [amplifiedV] = artSim.amplify(recV,o.adcLinearRange,o.adcNonlinearity,o.adcGain);
@@ -554,7 +641,7 @@ classdef artSim < handle
                     if i==1
                         ax = axes('Position',[.8 .7 .1 .1]);
                         % Show inset with amplification profile plus saturation range.
-                        x = min(o.vTacsActual(:)):1e-6:max(o.vTacsActual(:));
+                        x = min(o.vTcsActual(:)):1e-6:max(o.vTcsActual(:));
                         [y,satPoint]= artSim.amplify(x,o.adcLinearRange,o.adcNonlinearity,o.adcGain,satLevel=99);
                         plot(ax,x/1e-3,y/1e-3);
                         hold on
@@ -574,7 +661,7 @@ classdef artSim < handle
             arguments
                 o (1,1) artSim
                 prms (1,1) struct               % Artifact removal parameters
-                arMode (1,1) string             = "FASTR"
+                arMode (1,:) string             = "FASTR"
                 pv.freqRes (1,1) double         = 1
                 pv.highCutOff (1,1) double      = 35 % Hz
                 pv.lowCutOff (1,1) double       = 1 % Hz
@@ -583,28 +670,37 @@ classdef artSim < handle
                 pv.errorThreshold (1,1) double  =1
                 pv.fillHz (1,1) double          = 1;
                 pv.axs  = []
+                pv.tlim = [0 0.1] + mean(o.tRecord);
+            end
+
+            if isfield(prms,'tacsFrequency') && prms.tacsFrequency ~=o.tacsFrequency
+                fprintf("Frequency in the simulation (%.2f) does not match the frequency in the ar (%.2f)\n",o.tacsFrequency,prms.tacsFrequency)
             end
             %% Initialize the simulation , simulate the recording, then perform artifact removal.
             o.rng               % Reset rng if .reproducible
             o.reset;            % Start fresh
             o.simLfp;           % 1. Generate LFP/EEG .
-            o.simtACS;          % 2. Generate the tACS voltage
+            o.simTCS;          % 2. Generate the TCS voltage
             o.simRecording;      % 3. Simulate recording
             % Now run artifact removal
             [vRecovered,results] = artifactRemoval(o.vContaminated,...
                 prms, ...
                 'groundTruth',o.vTruth,...
-                'vTacsRecord',o.vRecordTacs,... % Include the tacs voltage in the PCA
+                'vTacsRecord',o.vRecordTcs,... % Include the tacs voltage in the PCA
                 'recordingSamplingRate',o.recordingSamplingRate,...
-                'mode',{arMode});
+                'mode',cellstr(arMode));
 
             %% Analyze the power spectrum
             [pwr,frequency] = pspectrum([o.vTruth vRecovered o.vContaminated ],o.recordingSamplingRate,'FrequencyLimits',[pv.lowCutOff pv.highCutOff],'FrequencyResolution',pv.freqRes);
             amplitude = sqrt(2)*sqrt(pwr); % Convert to muV amplitude.  (pspectrum is single sided PSD in rms,hence *sqrt(2))
 
             % Determine relative error in frequency domain
-            pctError = 100*(amplitude(:,2)-amplitude(:,1))./amplitude(:,1); % Divide by neural truth
-            meanPctError = mean(abs(pctError));
+            hasSignal = amplitude(:,2)>1e-6;
+
+            absError = amplitude(:,2)-amplitude(:,1);
+            pctError = 100*(absError)./amplitude(:,1); % Divide by neural truth
+            pctError(~hasSignal) = NaN;
+            meanPctError = mean(abs(pctError),"omitmissing");
             results.amplitude = amplitude;
             results.pctError = pctError;
             results.frequency = frequency;
@@ -616,10 +712,14 @@ classdef artSim < handle
             [~,~,from, to] = fillRegions(abs(results.pctError)>pv.errorThreshold,nrToFill);
             forbidden = (results.frequency(to)-results.frequency(from));
             results.forbidden = sum(forbidden);
-            if ~isempty(from) & ~isempty(to)
-                inTacsBand = from<find(results.frequency<o.tacsFrequency,1,"last") & to > find(results.frequency > o.tacsFrequency,1,"first");
+            if o.tacsFrequency==0
+                inTacsBand = false;
             else
-                inTacsBand =false;
+                if ~isempty(from) & ~isempty(to)
+                    inTacsBand = from<find(results.frequency<o.tacsFrequency,1,"last") & to > find(results.frequency > o.tacsFrequency,1,"first");
+                else
+                    inTacsBand =false;
+                end
             end
             if any(inTacsBand)
                 results.forbiddenBand = forbidden(inTacsBand);
@@ -630,16 +730,44 @@ classdef artSim < handle
 
             %% Generate a figure
             if isempty(pv.axs)
-                [f,axs] = fig('Name',arMode+pv.tag,'paperCols',1,'height',9,'nrRows',2,'byColumn',false);
+                [f,axs] = fig('Name',strjoin(arMode,'/')+pv.tag,'paperCols',1,'height',9,'nrRows',3,'byColumn',false);
             else
                 axs = pv.axs;
             end
-            if isgraphics(axs(1,1))
-                axes(axs(1,1)) % Spectrum
+            if isgraphics(axs(1))
+                axes(axs(1)) % Time course
+                yyaxis left  % Truth and recovered signal (small)
+                tStay = o.tRecord >= pv.tlim(1)  &  o.tRecord < pv.tlim(2) ;
+                h = plot(o.tRecord(tStay)-pv.tlim(1),[o.vTruth(tStay) vRecovered(tStay)]./1e-6,'LineWidth',1,'LineStyle','-');
+                ylabel 'Amplitude (\muV)'
+                ax =gca;
+                ax.YColor ='k';
+                hold on
+                plot(xlim,zeros(1,2),'k-')
+                ylim([-1 1]*max(abs(ylim)))
+                yyaxis right % Signal with artifact
 
+                h(3) = plot(o.tRecord(tStay)-pv.tlim(1),o.vContaminated(tStay)/1e-6,'LineWidth',1,'LineStyle','-');
+                h(1).Color = 'r';
+                h(2).Color = 'g';
+                h(3).Color = 'b';
+                h(1).LineWidth =2;
+                ylim([-1 1]*max(abs(ylim)))
+                
+
+                ax =gca;
+                ax.YColor ='b';
+                xlabel 'Time (s)'
+                ylabel 'Amplitude (\muV)'
+
+            end
+            if isgraphics(axs(2))
+                axes(axs(2)) % Spectrum
                 yyaxis left  % Truth and recovered signal (small
                 h = plot(frequency,amplitude(:,[1 2])./1e-6,'LineWidth',1,'LineStyle','-');
                 ylabel 'Amplitude (\muV)'
+                hold on
+                plot(xlim,zeros(1,2),'k-')
                 ax =gca;
                 ax.YScale = 'Log';
                 ax.YColor ='k';
@@ -649,7 +777,7 @@ classdef artSim < handle
                 h(1).Color = 'r';
                 h(2).Color = 'g';
                 h(3).Color = 'b';
-                h(1).LineWidth =3;
+                h(1).LineWidth =2;
 
                 legend('Neural','Recovered','Recorded')
 
@@ -660,15 +788,24 @@ classdef artSim < handle
                 xlabel 'Frequency (Hz)'
                 ylabel 'Amplitude (\muV)'
             end
-            if isgraphics(axs(2))
-                axes(axs(2)); % Error as a percentage
-                plot(frequency,pctError,'LineWidth',1,'Color','g');
+            if isgraphics(axs(3))
+                axes(axs(3)); % Error as a percentage
+                yyaxis left
+                plot(frequency,pctError,'LineWidth',1,'Color','k');                
                 xlabel 'Frequency (Hz)'
                 ylabel 'Error (%)'
-                set(gca,'XScale','Linear','YScale','Linear','XLim',[pv.lowCutOff pv.highCutOff]);
+                set(gca,'XScale','Linear','YScale','Linear','XLim',[pv.lowCutOff pv.highCutOff],'YColor','k');
+                ylim([-1 1]*max(abs(ylim)))
+                hold on
+                plot(xlim,zeros(1,2),'k-')
+                yyaxis right
+                plot(frequency,absError/1e-6,'LineWidth',1,'Color','m')
+                set(gca,'YScale','Linear','YColor','m');                
+                ylabel 'Error (\muV)'
+               ylim([-1 1]*max(abs(ylim)))
             end
 
-            fprintf('%s (r=%.2f rmse = %.0f/%.0f muV ae = %.1f%%)\n',arMode,results.r.(arMode),results.mse.(arMode),o.additive/1e-6,meanPctError);
+            fprintf('%s (r=%.2f rmse = %.0f/%.0f muV ae = %.1f%%)\n',strjoin(arMode,'/'),results.r.(arMode),results.mse.(arMode),o.additive/1e-6,meanPctError);
 
             % Export figure for paper
             if pv.exportFig
@@ -705,7 +842,7 @@ classdef artSim < handle
             o.reset;            % Start clean
             o.simLfp;           % 1. Generate LFP/EEG .
             o.simSpikes;        % 2. Generate spikes
-            o.simtACS;          % 3. Generate the tACS voltage
+            o.simTCS;          % 3. Generate the tACS voltage
             o.simRecording;      % 4. Simulate recording
 
 
@@ -714,7 +851,7 @@ classdef artSim < handle
                 prms, ...
                 'tacsFrequency',o.tacsFrequency,...
                 'groundTruth',o.vTruth,...
-                'vTacsRecord',o.vRecordTacs,... % Include the tacs voltage in the PCA
+                'vTacsRecord',o.vRecordTcs,... % Include the tacs voltage in the PCA
                 'recordingSamplingRate',o.recordingSamplingRate,...
                 'mode',{arMode});
 
@@ -751,7 +888,7 @@ classdef artSim < handle
                     if i==1
                         legend([h0 h1 h2],'V','Spk','Detect','Orientation','horizontal','Location','north')
                     else
-                        h3= plot(o.tTacs,max(ylim)*o.vTacs/max(o.vTacs),'b:','LineWidth',1);
+                        h3= plot(o.tTcs,max(ylim)*o.vTcs/max(o.vTcs),'b:','LineWidth',1);
                         legend (h3,'tACS')
                     end
                     xlim(axs(i),pv.xlim)
@@ -1001,7 +1138,7 @@ classdef artSim < handle
                 voltageInBand = downsample(o.vRecordNeighbor,o.recordingSamplingRate/1000);
             else
                 % Estimate phase from the tACS signal.
-                voltageInBand = downsample(o.vRecordTacs,o.recordingSamplingRate/1000);
+                voltageInBand = downsample(o.vRecordTcs,o.recordingSamplingRate/1000);
                 voltageInBand = repmat(voltageInBand,[1 2]);
             end
             [B,A] = butter(3,(o.tacsFrequency+[-1 +1])/(1000/2),'bandpass');
