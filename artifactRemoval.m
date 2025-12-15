@@ -17,9 +17,8 @@ function [vClean ,results] = artifactRemoval(v,varargin)
 % v = raw signal (assumed to be in volts) from which artifacts are to be removed.
 % 'tacsFrequency' - Frequency of the tACS signal. It is assumed that tACS
 % is applied for the duration of the signal v.
-% 'nrCycles'   - For some artifact removal methods, the signal is divided
-%               into segments; this parameter determines how many cycles of the tACS
-%               to keep in one segment.
+% 'segementDuration'   - For some artifact removal methods, the signal is divided
+%               into segments.
 % 'mode' - Cell array specifying which artifact removal algorithms to run
 % (they will be executed in the specified order). For instance, the alogrithm
 % in the Niazy et al paper (below) is approximated by: {'TC','MEANREMOVAL','PCA','ANC-ARTIFACT'}. 
@@ -155,8 +154,7 @@ function [vClean ,results] = artifactRemoval(v,varargin)
 p= inputParser;
 p.StructExpand = true;
 p.addParameter('mode',{},@(x)(iscell(x) && all(cellfun(@(z) ismember(z,{'NOP','NOTCH','RBAR','FBAR','FASTR','TC','MEANREMOVAL','PCA','ANC-SEGMENT','ANC-ARTIFACT','ANC-REFERENCE'}),x))));
-p.addParameter('nrCycles',1);
-p.addParameter('segmentDuration',NaN)
+p.addParameter('segmentDuration',3)
 p.addParameter('tacsFrequency',NaN);
 p.addParameter('autocorrelationWindow',0);
 p.addParameter('recordingSamplingRate',30e3);
@@ -185,17 +183,18 @@ doQC = ~isempty(p.Results.groundTruth);
 
 nrSamples = size(v,1);
 samplingRate= p.Results.recordingSamplingRate;
-if p.Results.tacsFrequency>0 && isnan(p.Results.segmentDuration)
-    nrSamplesPerSegment = (samplingRate*p.Results.nrCycles/p.Results.tacsFrequency);
-elseif ~isnan(p.Results.segmentDuration)
-    nrSamplesPerSegment =  p.Results.segmentDuration*samplingRate;
+if p.Results.tacsFrequency>0 
+    nrCycles = p.Results.segmentDuration*p.Results.tacsFrequency;
+    if nrCycles~=round(nrCycles)
+     fprintf(2,'Non-integer number of cycles per segment (%.2f).\n',nrCycles)
+    end
 else
-    error('Specify either the number of cycles (of the tACS) or the segmentDuration.')
+    nrCycles = 1;
 end
+nrSamplesPerSegment =  p.Results.segmentDuration*samplingRate;
 if nrSamplesPerSegment~=round(nrSamplesPerSegment)
     fprintf(2,'Non-integer number of samples per segment (%.2f).\n',nrSamplesPerSegment)
 end
-
 nrSegments = ceil(nrSamples/nrSamplesPerSegment);
 if nrSegments~=nrSamples/nrSamplesPerSegment
     fprintf(2,'Non-integer number of segments (%.2f).\n',nrSamples/nrSamplesPerSegment);
@@ -314,8 +313,8 @@ for m=1:nrModes
                     % Sliding window
                     nrSamplesPerCycle = round(samplingRate/p.Results.tacsFrequency);
                     % Determine the mean artifact for each cycle within the
-                    % window (i.e. ignoring the p.Results.nrCycles that make up a segment)
-                    singeCycleArtifact = mean(reshape(vClean(1:nrSamplesPerCycle*p.Results.nrCycles,keep),nrSamplesPerCycle,[]),2,'omitnan');
+                    % window (i.e. ignoring the nrCycles that make up a segment)
+                    singeCycleArtifact = mean(reshape(vClean(1:nrSamplesPerCycle*nrCycles,keep),nrSamplesPerCycle,[]),2,'omitnan');
                     % Then assume that this artifact simply repeats for all
                     % cycles within the segment.
                     ix = mod(0:numel(thisSegment)-1,nrSamplesPerCycle)+1;
@@ -412,14 +411,14 @@ for m=1:nrModes
                     reference = zeros(nrSamples,1);
                     reference(segmentStart) =1;
                     % One coefficient for each time point in the segment
-                    N = round(samplingRate.*(p.Results.nrCycles/p.Results.tacsFrequency))-1;
+                    N = round(samplingRate.*(nrCycles/p.Results.tacsFrequency))-1;
                 case 'ANC-ARTIFACT'
                     % Apply ANC to the artifact that has been estimated so
                     % far.
                     if all(totalArtifact==0)
                         N=0;
                     else
-                        N = round(p.Results.nrCycles.*samplingRate./p.Results.tacsFrequency)-1;
+                        N = round(nrCycles.*samplingRate./p.Results.tacsFrequency)-1;
                         x = unSegment(vClean,isPadded,nrPre,nrPost);
                         y = unSegment(totalArtifact,isPadded,nrPre,nrPost);
                         reference = ((x'*y)./(y'*y))*y;

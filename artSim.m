@@ -8,15 +8,15 @@ classdef artSim < handle
     % range,etc.
     properties (SetAccess=public,GetAccess=public)
         reproducible              = false;    % Set to true to reset the RNG to default before each simulation.
-        % Set it to a nonnegative integer to use that as a seed.
+                                              % Set it to a nonnegative integer to use that as a seed.
 
         duration                  = 120;       % [s] Duration of the recording to simulate.
 
+        %% Stimulation
         recordingSamplingRate     = 30e3;     % [Hz] Sampling rate of the recording device
-        stimulatorSamplingRate    = 2e3;      % [Hz] Sampling rate of the tACS stimulator
+        stimulatorSamplingRate    = 2e3;      % [Hz] Sampling rate of the TCS stimulator
         currentResolution         = 1e-6;     % [A] Current resolution of the stimulator.
-        highPass                  = 0;        % [Hz] Highpass cutoff of the pre-amplification hardware filter.
-
+        
         % tACS
         tacsAmplitude             = 0;        % [A] Current amplitude
         tacsPhaseOffset           = 0;        % [Rad] Current phase
@@ -29,6 +29,7 @@ classdef artSim < handle
 
         resistance                = 1;        % [Ohm] Effective resistance at the recording site.
 
+        %% Physiological impedance artifacts
         % Simulating periodic resistance changes as caused by physiological changes such as heartbeats or respiration
         % The default implementation uses a periodic sinusoidal or
         % pulse-like shape, but the user can specify any zFun to simulate
@@ -39,7 +40,7 @@ classdef artSim < handle
         zVariability      = 0;        % [fraction of heartbeat frequency per *hour*]
         zFun             = []         % Function that returns the impedance at each timepoint.
 
-        % Spikes
+        %% Spikes
         spikePeak                 = 0;        % [V] Peak of the action potential
         spikePeakVariation        = 0;        % Spikes are scaled by 1+randn*spikePeakVariation.
         spikeRate                 = 0;        % [Hz] Firing rate
@@ -51,12 +52,14 @@ classdef artSim < handle
         % 0 means Poisson random spike times,
         % Typical PLV <0.05 which corresponds to a synchrony of 0.1
         % A high PLV of 0.3 is reached for synchrony=1;
+        %% Local Field Potentials and EEG signals
         lfpAmplitude              = 0;        % [V] amplitude of the intrinsic LFP signal.
         lfpPhaseOffset            = 0;        % [rad]
         lfpFrequency              = 0;        % [Hz] Frequency of an intrinsic oscillation
         lfpPeakWidth              = 0;        % [Hz] Standard deviation of the ampltiude distribution for a collection of LFPs with random phases.
         preferredPhase            = 0;        % [Rad] Phase at which spikes occur preferentially (if syncrony>0)
 
+        %% Background actvity/noise
         additive                  = 0;        % [V]  Standard deviation of additive noise
         pinkNoise                 = true;     % Set to true to generate pink noise (white otherwise)
         multiplicative            = 0;        % Standard deviation of the multiplicative noise
@@ -69,6 +72,9 @@ classdef artSim < handle
         adcRange                   = 10e-3;     % The range of the ADC; bits are distributed evenly across this +/- range.
         adcBitDepth                = 16;       % Number of bits in the ADC
         adcGain                    = 1;        % Amplifier gain
+
+        highPass                  = 0;        % [Hz] Highpass cutoff of the pre-amplification hardware filter.
+
     end
     properties (SetAccess= protected, GetAccess=public)
         tSimulate;  % The internal time of simulation
@@ -78,7 +84,6 @@ classdef artSim < handle
         lfp;        % The LFP at the electrode of interest.
         vTcsActual % The voltage created by the TCS (includes discretization and impedance artifacts)
         tRecord;     % The time of each sample
-
         vRecord;    % The recorded voltage - including the artifact. First column is without artifact , second column with.
         vRecordNeighbor; % The recorded voltage at the "neighboring" electrode.First column is without artifact, second column with.
         vRecordTcs; % The recorded TCS voltage (at the recording sampling rate).
@@ -180,6 +185,8 @@ classdef artSim < handle
         end
         function o = artSim(prms)
             %artSim Construct an artSim instance
+            % Can be called with a structure that has fields matching
+            % artSim properties to set those properties.
             arguments
                 prms (1,1) struct = struct; % Parameter settings.
             end
@@ -225,10 +232,11 @@ classdef artSim < handle
             %    lfpPhaseOffset
             %    lfpPeakWidth
             %  COMPUTES
-            %   lfp
-            %   lfpPhase
-            if o.lfpAmplitude ==0;return;end
+            %   lfp            
             thisLfp = zeros(size(o.tSimulate));
+
+            if o.lfpAmplitude ==0;o.lfp= thisLfp;return;end
+            
             nrOscillations= max([numel(o.lfpAmplitude) numel(o.lfpPeakWidth) numel(o.lfpPhaseOffset) numel(o.lfpFrequency)]);
             if isscalar(o.lfpAmplitude);o.lfpAmplitude = o.lfpAmplitude*ones(1,nrOscillations);end
             if isscalar(o.lfpPeakWidth);o.lfpPeakWidth= o.lfpPeakWidth*ones(1,nrOscillations);end
@@ -254,16 +262,14 @@ classdef artSim < handle
                     keep = 1:highestFrequencyIx;
                     frequencies = frequencies(keep);
 
-
                     amplitude = o.lfpAmplitude(i) * exp(-((frequencies - o.lfpFrequency(i))/o.lfpPeakWidth(i)).^2);
                     phase = exp(1i * (2*pi*rand(size(frequencies)) - pi));
-                    spectrum_half = amplitude .* phase;
-                    % Enforce Real Signal Constraints (DC must be real, Nyquist real)
+                    spectrum_half = amplitude .* phase;                    
                     spectrum_half(1) = 0; % Eliminate DC offset
                     if mod(o.nrTimePoints,2) == 0
                         spectrum_half(end) = real(spectrum_half(end));
                     end
-                    % G. Create Full Two-Sided Spectrum (Conjugate Symmetry)
+                    % create the full two-sided spectrum 
                     if mod(o.nrTimePoints,2) == 0
                         spectrum = [spectrum_half; conj(fliplr(spectrum_half(2:end-1)))];
                     else
@@ -299,10 +305,9 @@ classdef artSim < handle
             % showTime  - limit the graph to the first n seconds of the stimulation [2]
             %
             % COMPUTES:
-            % vSpikes  = The voltage trace generated by the spikes only, sampled at 'recordingSamplingRate' [nrTimePoints 1]
+            % vSpike  = The voltage trace generated by the spikes only, sampled at 'recordingSamplingRate' [nrTimePoints 1]
             % ixSpike = The index into spikeV that corresponds to simulated spikes.
-            % neighborSpikeV = The spiking voltage observed in a
-            % neighboring electtrode (same noise, same lfp, but a  different random draw of spikes)
+            % vSpikeNneighbor = The spiking voltage observed in a neighboring electtrode (same noise, same lfp, but a  different random draw of spikes)
             arguments
                 o (1,1) artSim
                 pv.kappa (1,1) double =5
@@ -423,7 +428,7 @@ classdef artSim < handle
             % tacsPhaseOffset     - Phase at time 0. [rad]
             % tacsShape    - sine,sawtooth, square
             % tdcsMean   -  Mean current [A]
-            % tdcsRamp   - Duration of a ramp [s]
+            % tcsRamp   - Duration of a ramp [s]
             %
             % resistance - Effective resistance of the path between stimulation
             %               electrode and the recording site.
@@ -483,6 +488,7 @@ classdef artSim < handle
             % nature of the stimulation
             o.vTcsActual= interp1(o.tTcs,V,o.tSimulate,"previous","extrap");
 
+            %% Simulate impedance artifacts
             if isa(o.zFun,'function_handle')
                 % User-supplied function, pass the object
                 z = o.zFun(o);
@@ -492,7 +498,7 @@ classdef artSim < handle
                     fprintf(2,'Heartbeat is effectively locked to tACS - this is not a good simulation of a heartbeat... (use a frequency that is not a multiple of the tACS frequency)\n');
                 end
                 % Simulate a periodic "breathing/heartbeat" that changes the resistance - Pure sinusoid
-                % Or with some long-term variability on a scale of 1 hour.
+                % Or with some long-term variability.
                 frequency = o.zFrequency*(1+o.zVariability*sin(2*pi*(1/3600)*o.tSimulate));
                 z = sin(2*pi*frequency.*o.tSimulate);
                 if o.zDuration >0
@@ -540,9 +546,8 @@ classdef artSim < handle
         end
 
         function  simRecording(o,pv)
-            %simRecording - Simulate recording electrophysiogical signals produced by spikes, lfp, and tACS
-            % Simulate the output of the amplifier that records the combination of a stimulation artifact
-            % and an extracellular action potential trace.
+            %simRecording - Simulate the output of the amplifier that records 
+            % the combination of a stimulation artifact and neural signals.
             %
             % OPTIONAL EXTRA PARM/VALUE PAIRS
             % graph - Show a graph  [true]
@@ -551,13 +556,12 @@ classdef artSim < handle
             % COMPUTES
             %  vRecord - The Voltage as recorded by the device. The first column represents
             %       the voltage during sham (including  additive noise ). The second column
-            %       represents the same neural signal and additive noise,
-            %       but now with the stimulation artifacts (including multiplicative noise).
+            %       represents the same neural signal and noise,now with the stimulation artifacts (including multiplicative noise).
             % vRecordNeighbor - Same as vRecord, but for a neihboring
             %                       electrode (Same lfp , different
             %                       spikes).
             %
-            %  vRecordTacs- the applied stimulation voltage, as recorded by the
+            %  vRecordTcs- the applied stimulation voltage, as recorded by the
             %               recording device (and thus reflecting
             %               digitization of the stimulator).
             arguments
@@ -566,8 +570,8 @@ classdef artSim < handle
                 pv.showTime (1,1) double = 2
             end
 
-            % Store the recorded vTcs assuming a linear amplifier, with a
-            % highpass filter
+            % Store the recorded vTcs assuming a linear amplifier, with an
+            % optional highpass filter 
             if o.highPass >0
                 highPassFiltered  = highpass(o.vTcsActual,o.highPass,o.quasiContinuousSamplingRate);
             else
@@ -655,9 +659,10 @@ classdef artSim < handle
 
         end
         function results = simPlotEEG(o,prms,arMode,pv)
-            % Helper function to run the simulation, recording and artifact correction
-            % and show the results for an EEG (or LFP) experiment. See
-            % eegArtifacts.mlx for examples.
+            % Helper function that shows the steps needed to run a 
+            % simulation followed by artifact correction and analysis for 
+            % an EEG (or LFP) experiment. 
+            % SEE ALSO eegArtifacts.mlx for examples.
             arguments
                 o (1,1) artSim
                 prms (1,1) struct               % Artifact removal parameters
@@ -668,6 +673,7 @@ classdef artSim < handle
                 pv.tag (1,1) string             = ""
                 pv.exportFig (1,1) logical      = false
                 pv.errorThreshold (1,1) double  = 1 % More than 1% error is "forbidden".
+                pv.amplitudeThreshold (1,1) double =1e-6 % Ignore frequencies with amplitudes less than this [V].
                 pv.fillHz (1,1) double          = 1;
                 pv.axs  = []
                 pv.tlim = [0 0.1] + mean(o.tRecord);
@@ -695,11 +701,13 @@ classdef artSim < handle
             [pwr,frequency] = pspectrum([o.vTruth vRecovered o.vContaminated ],o.recordingSamplingRate,'FrequencyLimits',[pv.lowCutOff pv.highCutOff],'FrequencyResolution',pv.freqRes);
             amplitude = sqrt(2)*sqrt(pwr); % Convert to muV amplitude.  (pspectrum is single sided PSD in rms,hence *sqrt(2))
 
-            % Determine relative error in frequency domain
-            hasSignal = amplitude(:,2)>1e-6;
-
-            absError = amplitude(:,2)-amplitude(:,1);
-            pctError = 100*(absError)./amplitude(:,1); % Divide by neural truth
+            % Determine error in frequency domain
+            mismatch = amplitude(:,2)-amplitude(:,1);
+            % Divide by neural truth to get pct error
+            pctError = 100*(mismatch)./amplitude(:,1); 
+            % Ignore frequencies where the signal is below the amplitudeThreshold
+            % to avoid large pctError for empty frequency bins
+            hasSignal = amplitude(:,2)> pv.amplitudeThreshold;
             pctError(~hasSignal) = NaN;
             meanPctError = mean(abs(pctError),"omitmissing");
             results.amplitude = amplitude;
@@ -707,14 +715,13 @@ classdef artSim < handle
             results.frequency = frequency;
             results.meanPctError  = meanPctError;
 
-
-            %% Assess the forbidden zones in the spectrum
+            %% Determine the forbidden zones in the spectrum            
             nrToFill = pv.fillHz/(results.frequency(3)-results.frequency(2)) ;
             [~,~,from, to] = fillRegions(abs(results.pctError)>pv.errorThreshold,nrToFill);
             forbidden = (results.frequency(to)-results.frequency(from));
             results.forbidden = sum(forbidden);
             if o.tacsFrequency==0
-                inTacsBand = false;
+                inTacsBand = false;  % in-band undefined for tDCS.
             else
                 if ~isempty(from) & ~isempty(to)
                     inTacsBand = from<find(results.frequency<o.tacsFrequency,1,"last") & to > find(results.frequency > o.tacsFrequency,1,"first");
@@ -755,7 +762,7 @@ classdef artSim < handle
                 h(1).LineWidth =pv.lineWidth;
                 ylim([-1 1]*max(abs(ylim)))
                 
-
+                legend(h,'Neural','Recovered','Recorded')
                 ax =gca;
                 ax.YColor ='b';
                 xlabel 'Time (s)'
@@ -768,7 +775,6 @@ classdef artSim < handle
                 h = plot(frequency,amplitude(:,[1 2])./1e-6,'LineWidth',1,'LineStyle','-');
                 ylabel 'Amplitude (\muV)'
                 hold on
-                plot(xlim,zeros(1,2),'k-')
                 ax =gca;
                 ax.YScale = 'Log';
                 ax.YColor ='k';
@@ -779,8 +785,9 @@ classdef artSim < handle
                 h(2).Color = 'g';
                 h(3).Color = 'b';
                 h(1).LineWidth =2;
+                plot(xlim,zeros(1,2),'k-')
 
-                legend('Neural','Recovered','Recorded')
+                legend(h,'Neural','Recovered','Recorded')
 
                 ax =gca;
                 ax.YScale = 'Log';
@@ -800,7 +807,7 @@ classdef artSim < handle
                 hold on
                 plot(xlim,zeros(1,2),'k-')
                 yyaxis right
-                plot(frequency,absError/1e-6,'LineWidth',1,'Color','m')
+                plot(frequency,mismatch/1e-6,'LineWidth',1,'Color','m')
                 set(gca,'YScale','Linear','YColor','m');                
                 ylabel 'Error (\muV)'
                ylim([-1 1]*max(abs(ylim)))
@@ -810,8 +817,8 @@ classdef artSim < handle
 
             % Export figure for paper
             if pv.exportFig
-                name = sprintf('figure%s.png',pv.tag);
-                exportgraphics(f,fullfile('../docs/',name),"Colorspace",'rgb','ContentType','vector','Resolution',300);
+                name = sprintf('%s.png',pv.tag);
+                exportgraphics(f,fullfile('../docs/',name),"Colorspace",'rgb','ContentType','vector','Resolution',600);
             end
         end
 
@@ -889,7 +896,7 @@ classdef artSim < handle
                     if i==1
                         legend([h0 h1 h2],'V','Spk','Detect','Orientation','horizontal','Location','north')
                     else
-                        h3= plot(o.tTcs,max(ylim)*o.vTcs/max(o.vTcs),'b:','LineWidth',1);
+                        h3= plot(o.tSimulate,max(ylim)*o.vTcsActual/max(o.vTcsActual),'b:','LineWidth',1);
                         legend (h3,'tACS')
                     end
                     xlim(axs(i),pv.xlim)
@@ -915,14 +922,7 @@ classdef artSim < handle
                 axs(3).RLim = [0 maxRho];
                 axs(3).RTick = [0 maxRho];
                 axs(3).RTickLabel = [];
-                axs(3).RAxisLocation =75;
-                %axs(3).RAxis.Label.String ='p(spike)';
-                %axs(3).RAxis.Label.Rotation = 70;
-                %axs(3).RAxis.Label.Position= [70 0.5];
-
-                %axs(3).ThetaAxis.Label.String ='tACS phase';
-                %axs(3).ThetaAxis.Label.Position =[0 1.1];
-                %axs(3).ThetaAxis.Label.Rotation   = 90;
+                axs(3).RAxisLocation =75;             
                 legend(h, 'Sham','tACS','Location','SouthEastOutside')
             end
 
@@ -945,8 +945,8 @@ classdef artSim < handle
             end
 
             if pv.exportFig
-                name = sprintf('figure%s.png',pv.tag);
-                exportgraphics(f,fullfile('../docs/',name),"Colorspace",'rgb','ContentType','vector','Resolution',300);
+                name = sprintf('%s.png',pv.tag);
+                exportgraphics(f,fullfile('../docs/',name),"Colorspace",'rgb','ContentType','vector','Resolution',600);
             end
 
             % Summarize results on the command line
@@ -975,6 +975,7 @@ classdef artSim < handle
             % 'sharedThreshold' - Set to true to determine the threshold by
             %                   pooling all data (tacs+ sham), set to false to use a separate
             %                   voltage threshold for tacs and sham trials.
+            %                   [true]
             % 'sortMode' = MATCHSHAM, MOSTSPIKES,ALL
             % 'spikeBand' - Frequency band in which to detect spikes [300 7000] Hz.
             % 'filterOrder' - Order of the Butterworth Bandpass filter [3].
@@ -1006,7 +1007,6 @@ classdef artSim < handle
                 pv.nrPhaseBins (1,1) double = 8
                 pv.nrBootstraps (1,1) double  =0
             end
-
 
             % Filter the signal in the band that contains the spikes.
             % A Butterworth bandpass filter is a common way to do this:
@@ -1084,7 +1084,7 @@ classdef artSim < handle
                     label ='tACS';
                 end
                 isAssignedSpike = stay & ismember(spikes.assigns,theNeuron);
-                results(i).ixDetected = ixDetectedSpike(isAssignedSpike);
+                results(i).ixDetected = ixDetectedSpike(isAssignedSpike); %#ok<*AGROW>
                 results(i).detectedMs = detectedSpikeMs(isAssignedSpike);
                 results(i).detectedMs(results(i).detectedMs ==0) =1;% Used as an index below ; must be>0.
 
@@ -1142,8 +1142,10 @@ classdef artSim < handle
                 voltageInBand = downsample(o.vRecordTcs,o.recordingSamplingRate/1000);
                 voltageInBand = repmat(voltageInBand,[1 2]);
             end
-            [B,A] = butter(3,(o.tacsFrequency+[-1 +1])/(1000/2),'bandpass');
-            voltageInBand = filtfilt(B,A,voltageInBand );
+            if o.tacsFrequency>0 
+                [B,A] = butter(3,(o.tacsFrequency+[-1 +1])/(1000/2),'bandpass');
+                voltageInBand = filtfilt(B,A,voltageInBand );
+            end
             estimatedPhase = artSim.phase(voltageInBand);
             estimatedPhase = mod(estimatedPhase+2*pi,2*pi); % Warp to [0 2pi];
             % Determine PPC/PLV
@@ -1160,6 +1162,7 @@ classdef artSim < handle
                 results(i).sdWF = nan(size(spikes.waveforms,2),pv.nrPhaseBins);
                 results(i).meanMissedWF = nan(size(spikes.waveforms,2),pv.nrPhaseBins);
                 results(i).sdMissedWF = nan(size(spikes.waveforms,2),pv.nrPhaseBins);
+                  
 
                 edges= linspace(0,2*pi,pv.nrPhaseBins+1);
                 results(i).binCenters = edges(1:end-1)';
@@ -1193,6 +1196,12 @@ classdef artSim < handle
                 else
                     results(i).missedSpikeCount  =zeros(pv.nrPhaseBins,1);
                 end
+                % accumarry does not count phase bins that never occured.
+                % Set to 0.
+                nrMissing = pv.nrPhaseBins-numel(results(i).phaseCount);
+                results(i).phaseCount = [results(i).phaseCount; zeros(nrMissing,1)];
+                results(i).spikeCount = [results(i).spikeCount; zeros(nrMissing,1)];
+                results(i).missedSpikeCount = [results(i).missedSpikeCount; zeros(nrMissing,1)];
             end
         end
     end
