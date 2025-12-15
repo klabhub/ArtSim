@@ -48,7 +48,7 @@ function [vClean ,results] = artifactRemoval(v,pv)
 % 'autocorrelationWindow' - Time in seconds over which autocorrelation in
 %                           the signal is expected. Segments to determine the mean
 %                           will be separated by at least this amount to avoid removing true signal.
-%                           [0.1 s]
+%                           [0]
 %  'slide'              Set to true to use a sliding window (width: nrSegPerWindow, step: 1 tACS cycle) to estimate the
 %                           average artifact per segment. When false, the average artifact is determined as the average over all
 %                           neighboring segments in the window. [true]
@@ -83,7 +83,7 @@ function [vClean ,results] = artifactRemoval(v,pv)
 %   'ancMu' -  the step size of the ANC [0.05]
 %   'ancOnline' - Whether to use online ANC filter estimates, or to
 %   estimate the ANC filter based on the entire signal, then apply the
-%   final estimate to all sapmples. [true].  (See anc.m for details)
+%   final estimate to all sapmples. [false].  (See anc.m for details)
 %   For FASTR mode, setting ancOnline to false implies that ANC will not be
 %   applied at all (it can only do the "online" variant).
 %

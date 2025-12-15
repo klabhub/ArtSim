@@ -19,7 +19,6 @@ function [filtered,noiseEstimate,filter]= anc(reference,signal,N,mu,guess,online
 % filtered   - The signal, after removing the noise as estimated by ANC
 % noise      - The estimated noise
 % filter     - The estimated filter
-% delta       - the mean absolute change in the filter with each time step.
 %
 % BK  - Nov 2021
 
@@ -31,9 +30,6 @@ arguments
     guess (:,1) double = []
     online (1,1) logical = true
 end
-
-%#ok<*ASGLU> 
-%#ok<*UNRCH> 
 
 debug =false; 
 
