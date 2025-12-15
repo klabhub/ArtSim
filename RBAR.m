@@ -3,7 +3,9 @@ function v = RBAR(v,tacsArtifact)
 % Solve this regression for each segment
 % vRecorded = offset + slope*tacsArtifact
 % then remove this from the recorded signal by substraction 
-% vClean = vRecorded-offset - slope*tacsArtifact
+% vClean = vRecorded - slope*tacsArtifact
+% Note that the offset is kept to avoid removng the mean in each
+% segment, which could remove signal for short segments.
 arguments
     v (:,:) double    %[nrSamplesPerSegment nrSegments]
     tacsArtifact (:,:) double %[nrSamplesPerSegment nrSegments]
@@ -14,7 +16,7 @@ beta  = zeros(2,nrSegments);
 for i=1:size(v,2)
     stay = ~isnan(v(:,i)) & ~isnan(tacsArtifact(:,i));  % Keep non-nan
     D = [ones(sum(stay),1) tacsArtifact(stay,i)];
-    beta(:,i) = regress(v(stay,i),D(stay,:)); % Regress    
+    beta(:,i) = D \ v(stay, i); % Regress    
 end
-v = v - 0*beta(1,:) - beta(2,:).*tacsArtifact; % Remove signal that matches the tACS artifact (plus the mean of the segment)
+v = v - beta(2,:).*tacsArtifact; % Remove signal that matches the tACS artifact
 end
