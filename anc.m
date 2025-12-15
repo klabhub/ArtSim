@@ -23,31 +23,21 @@ function [filtered,noiseEstimate,filter]= anc(reference,signal,N,mu,guess,online
 %
 % BK  - Nov 2021
 
-nin=nargin;
-if nin <6
-    online = true;
-    if nin <5
-        guess = [];
-        if nin<4
-            mu =0.05;
-            if nin <3
-                N =20;
-            end
-        end
-    end
+arguments
+    reference (:,1) double {mustBeNonmissing}
+    signal (:,1) double
+    N (1,1) double = 20
+    mu (1,1) double = 0.05
+    guess (:,1) double = []
+    online (1,1) logical = true
 end
 
 %#ok<*ASGLU> 
 %#ok<*UNRCH> 
 
 debug =false; 
-useMex = false; % The Matlab code below
-                % is faster than the compiled mex file...so don't
-                % use mex...
 
-assert(size(signal,2)==1 && size(reference,2)==1,'Only single columnvectors are allowed in the call to anc.m')
-assert(size(signal,2)==size(reference,2),'Reference and Signal must have the same number of samples')
-assert(~any(isnan(reference)),'The reference signal should not have NaNs.')
+assert(size(signal,1)==size(reference,1),'Reference and Signal must have the same number of samples')
 nrSamples=numel(reference);
 % Scale mu as in Allen et al 2010 but with a robust estimate of the stdev
 mu = mu./(N.*mad(reference));
@@ -55,10 +45,6 @@ if isempty(guess)
     guess = zeros(N+1,1);
 end
 
-if  useMex && exist('ancEstimate','file')==3
-    % Use the mex-file to estimate the filter. Same results.
-    [onlineFiltered,noiseEstimate,filter,delta] =ancEstimate(reference,signal,N,mu,guess);    
-else    
     % Use the same algorithm in Matlab.
     if debug
         everyN =100; 
@@ -87,7 +73,6 @@ else
             end
         end
     end    
-end
 
 if online
     % Use the online filtering (as estimated above)
