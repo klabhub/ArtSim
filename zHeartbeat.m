@@ -4,7 +4,7 @@ function z = zHeartbeat(o,filename,samplingRate)
     % and return the impedance to use at eacht timepoint of an ArtSim
     % simulation.
     %
-    % The example data set (data/MIT_BIH_100.csv) has two leads,
+    % The example data set (MIT_BIH_100.csv) has two leads,
     % was recorded at 360 samples/s from a person with a heartbeat of ~ 75 bpm.
     % This function uses the MLII lead.
     %
@@ -19,7 +19,7 @@ function z = zHeartbeat(o,filename,samplingRate)
     % 
     arguments
         o (1,1) artSim
-        filename (1,1) string = "../data/MIT_BIH_100.csv" 
+        filename (1,1) string = "MIT_BIH_100.csv" 
         samplingRate =360;
     end
     

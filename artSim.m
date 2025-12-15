@@ -690,12 +690,12 @@ classdef artSim < handle
             o.simTCS;          % 2. Generate the TCS voltage
             o.simRecording;      % 3. Simulate recording
             % Now run artifact removal
-            [vRecovered,results] = artifactRemoval(o.vContaminated,...
-                prms, ...
-                'groundTruth',o.vTruth,...
-                'vTacsRecord',o.vRecordTcs,... % Include the tacs voltage in the PCA
-                'recordingSamplingRate',o.recordingSamplingRate,...
-                'mode',cellstr(arMode));
+            prms.groundTruth = o.vTruth;
+            prms.vRecordTcs = o.vRecordTcs;
+            prms.recordingSamplingRate  = o.recordingSamplingRate;
+            prms.mode=cellstr(arMode);
+            prms = namedargs2cell(prms);
+            [vRecovered,results] = artifactRemoval(o.vContaminated,prms{:});
 
             %% Analyze the power spectrum
             [pwr,frequency] = pspectrum([o.vTruth vRecovered o.vContaminated ],o.recordingSamplingRate,'FrequencyLimits',[pv.lowCutOff pv.highCutOff],'FrequencyResolution',pv.freqRes);
@@ -855,13 +855,13 @@ classdef artSim < handle
 
 
             %% Run artifact removal
-            [vRecovered] = artifactRemoval(o.vContaminated,...
-                prms, ...
-                'tacsFrequency',o.tacsFrequency,...
-                'groundTruth',o.vTruth,...
-                'vTacsRecord',o.vRecordTcs,... % Include the tacs voltage in the PCA
-                'recordingSamplingRate',o.recordingSamplingRate,...
-                'mode',{arMode});
+            prms.groundTruth = o.vTruth;
+            prms.tacsFrequency  = o.tacsFrequency;
+            prms.vRecordTcs = o.vRecordTcs;
+            prms.recordingSamplingRate  = o.recordingSamplingRate;
+            prms.mode=cellstr(arMode);
+            prms = namedargs2cell(prms);            
+            [vRecovered] = artifactRemoval(o.vContaminated,prms{:});
 
             %% Sort spikes
             [sortResults,spikes] =sortSpikes(o,vRecovered,...
