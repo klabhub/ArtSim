@@ -762,7 +762,7 @@ classdef artSim < handle
                 h(1).LineWidth =pv.lineWidth;
                 ylim([-1 1]*max(abs(ylim)))
                 
-                legend(h,'Neural','Recovered','Recorded')
+                legend(h,'Neural','Recovered','Recorded','Location','NorthEast')
                 ax =gca;
                 ax.YColor ='b';
                 xlabel 'Time (s)'
@@ -787,8 +787,9 @@ classdef artSim < handle
                 h(1).LineWidth =2;
                 plot(xlim,zeros(1,2),'k-')
 
-                legend(h,'Neural','Recovered','Recorded')
-
+                if ~isgraphics(axs(1)) 
+                    legend(h,'Neural','Recovered','Recorded')
+                end
                 ax =gca;
                 ax.YScale = 'Log';
                 ax.YColor ='b';
@@ -914,7 +915,7 @@ classdef artSim < handle
                     rho     = [sortResults(i).spikeCount;sortResults(i).spikeCount(1)]./[sortResults(i).phaseCount;sortResults(i).phaseCount(1)];
                     h(i)= polarplot(axs(3),theta,rho,'Color',colors(i),'LineStyle','-','LineWidth',1);
                     hold on
-                    polarplot(axs(3),theta,rho, '.','Color',colors(i));
+                  %  polarplot(axs(3),theta,rho, '.','Color',colors(i));
                     maxRho = max([maxRho;rho]);
                 end
                 axs(3).ThetaTick = [0 45 75 90 135 180 225 270 315];

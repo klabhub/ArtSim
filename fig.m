@@ -39,7 +39,7 @@ f =figure;
 
 switch (p.Results.paperCols)
     case 1
-        width = 6.68;
+        width = 7.68;
     case 1.5
         width = 9.94;
     case 2

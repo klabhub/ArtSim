@@ -6,7 +6,7 @@ function runAll(pv)
 % This output is saved to the trgFolder.
 arguments
     pv.trgFoldr    (1,1) string    = "c:/temp/artsim/";
-    pv.exportFormats  (1,:) string  = ["pdf"];
+    pv.exportFormats  (1,:) string  = ["tiff" "eps"];
     pv.mlxFiles      struct = dir('*Artifacts.mlx');
     pv.overwrite (1,1) logical = false
 end
