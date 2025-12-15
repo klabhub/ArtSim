@@ -14,15 +14,9 @@ arguments
     samplingRate (1,1) double
 end
 
-for i=1:size(v,2)
-    % For each segment ,do a FFT, find the relevant component and set it to
-    % zero, then ifft.
-    stay = ~isnan(v(:,i));
-    [ft,freq] = fftReal(v(stay,i),samplingRate);
-    [df,ixTacs] = min(abs(freq-tacsFrequency));
-    if df ~=0
-        fprintf(2,'No exactmatch for %.2f Hz tACS frequency. Removing %.2f Hz. Probably cause: non-integer number of cycles \n.',tacsFrequency,freq(ixTacs))
-    end
-    ft(ixTacs,:)=0;
-    v(stay,i) = ifftReal(ft,freq,samplingRate);
+% Vectorized FBAR
+[ft, freq] = fftReal(v, samplingRate); % fftReal already handles matrices
+[~, ixTacs] = min(abs(freq - tacsFrequency));
+ft(ixTacs, :) = 0; % Zero out for all segments
+v = ifftReal(ft, freq, samplingRate);
 end
