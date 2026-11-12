@@ -769,7 +769,7 @@ classdef artSim < handle
 
             %% Analyze the power spectrum
             [pwr,frequency] = pspectrum([o.vTruth vRecovered o.vContaminated ],o.recordingSamplingRate,'FrequencyLimits',[pv.lowCutOff pv.highCutOff],'FrequencyResolution',pv.freqRes);
-            amplitude = sqrt(2)*sqrt(pwr); % Convert to V amplitude.  (pspectrum is single sided PSD in rms,hence *sqrt(2))
+            amplitude = sqrt(2)*sqrt(pwr); % Convert to V amplitude.  (pspectrum is single sided in rms,hence *sqrt(2))
 
             % Determine error in frequency domain
             results.mismatch = amplitude(:,2)-amplitude(:,1);

@@ -324,6 +324,23 @@ p = 2*sum((4*j.^2*lambda^2-1).*exp(-2*j.^2*lambda^2));
 p = min(1,max(0,p));
 end
 
+function phase = sampleBaselinePhases(n, plv, preferredPhase)
+%SAMPLEBASELINEPHASES Sample phases with a specified expected baseline PLV.
+%   A fraction PLV of spikes is placed at the preferred phase and the
+%   remainder is uniform.  Thus the expected complex phase resultant is
+%   approximately PLV, while retaining a simple, reproducible null model.
+
+arguments
+    n (1,1) double {mustBeNonnegative, mustBeInteger}
+    plv (1,1) double {mustBeGreaterThanOrEqual(plv,0), mustBeLessThanOrEqual(plv,1)}
+    preferredPhase (1,1) double
+end
+
+phase = 2*pi*rand(n,1);
+locked = rand(n,1) < plv;
+phase(locked) = preferredPhase;
+end
+
 %[text] 
 
 %[appendix]{"version":"1.0"}
