@@ -1,8 +1,8 @@
-%[text] %[text:anchor:T_360F0929] # EEG Artifacts
-%[text] This script investigates how tACS stimulation artifacts affect EEG/LFP analysis and shows results for FASTR, FBAR, and RBAR algorithms.
-%[text:tableOfContents]{"heading":"Table of Contents"}
-
-%%
+%[text] %[text:anchor:T_360F0929] # Artifacts in resting state EEG data
+%[text] This script uses ArtSim's option to load data (from a Fieldtrip or EEGLAB data structure) and investigates whether (simulated) tACS can be removed and the true underlying signals recovered. 
+%[text] Specifically, I used 4 minutes of (eyes open) resting state activity recorded at electrodes near Oz.  In these data the 1/f decay rate as well as the strength of the alpha rhythm varies considerably across participants. 
+%[text] The simulated tACS signal applies a 1 mA current at 10 Hz  that results in a 15 mV artifact in the EEG signal.
+%[text] I then apply the three artifiact removal algorithms and compute the residual artifact (expressed as the percent error in the estimated power) near 10 Hz (directly affected by tACS) and near 5 Hz (control frequency).
 %[text] %[text:anchor:H_D32E8D0B] ## Setup Simulation
 %[text] First define the stimulation and recording parameters.
 startup; % Make sure all toolboxes are on the path
@@ -11,23 +11,13 @@ defaults.reproducible              = true;    % Fix the random number generator 
 %[text] Stimulation and Recording Equipment:
 defaults.stimulatorSamplingRate    = 1e3;     % 1 kHz 
 defaults.currentResolution         = 1e-6;    % 1 muA
-
-defaults.recordingSamplingRate     = 5e3;     % 5kHz
-defaults.adcLinearRange            = 200e-3;     % [V] Range over which the amplifier is linear
-defaults.adcNonlinearity           = 100;       % linear inside the range,saturation outside
-defaults.adcRange                  = 200e-3;     % The range of the ADC; bits are distributed evenly across this +/- range.
-defaults.adcBitDepth               = 24;       % Number of bits in the ADC
-defaults.adcGain                    = 1;        % Amplifier gain
-
-
 defaults.highPass                  = 0.01;    % Analog filter of the recording amplifier
 defaults.lowPass                   = 100;
 %[text] Experiment:
-
 defaults.duration                  = 4*60;   % 4 min of data
 defaults.tacsAmplitude              = 1e-3;    % 1 mA 
 defaults.resistance                 = 15;     % 15 mV artifact per mA current
-defaults.tacsFrequency              = 5;      % 5 Hz tACS
+defaults.tacsFrequency              = 10;      % 5 Hz tACS
 %[text] And setup the base parameters for artifiact removal
 arDefaults.slide                     = false;   % No sliding segment
 arDefaults.slack                     = 5e-3;    % 5 ms to realign segments
@@ -36,21 +26,22 @@ arDefaults.pcaNr                     = 2;       % First two PC are removed
 arDefaults.pcaVarExplained           = Inf;     % Ignore explained variance, always remove 2.
 arDefaults.pcaNrSegsPerWindow        = Inf;     % Use all segments (plus the tCS signal; below) to determine basis set.
 arDefaults.referenceSegment          = 1;       % Align to first segment
-arDefaults.recordingSamplingRate      = defaults.recordingSamplingRate; % Match to the recording
-arDefaults.segmentDuration          = 3;
+arDefaults.recordingSamplingRate     = defaults.recordingSamplingRate; % Match to the recording
+arDefaults.segmentDuration           = 3;
 
 %%
-%[text] %[text:anchor:H_DDD99D7B] ## Recovering the neural background with FASTR
+%[text] %[text:anchor:H_DDD99D7B] ## Estimate Alpha Power
 %[text] Create the artSim object using the default parameters defined above.
 A                   = artSim(defaults);
 ar                          = arDefaults;
 ar.tacsFrequency            = A.tacsFrequency;
 arModes = ["RBAR" "FBAR" "FASTR"];
-haveDJ = true;
+
 sCntr =0;
-if haveDJ %[output:group:70b5a62b]
-    allRestData = ns.Epoch & 'dimension="rest"' & (ns.Experiment & 'paradigm ="rvsRestingState"');
-    pctError = table();
+pctError = table();
+if ~isempty(getenv("DJ_HOST")) %[output:group:70b5a62b]
+    %% kLab only: retrieve the data from the datajoint server,
+    allRestData = ns.Epoch & 'dimension="rest"' & (ns.Experiment & 'paradigm ="rvsRestingState"');    
     for thisRestData = fetch(allRestData,'LIMIT 1000')'
         sCntr = sCntr+1;
         % Extract a Fieldtrip dataset
@@ -60,19 +51,25 @@ if haveDJ %[output:group:70b5a62b]
         eeg = A.lfp;
         save("../data/" + thisRestData.subject  + ".rest.mat","eeg");
         for arMode = arModes               
-            r  = simPlotEEG(A,ar,arMode,freqRes =1,axs=[]); %[output:6eb2c434] %[output:04075bb0] %[output:8934818e] %[output:3eee7ea0] %[output:7a077834] %[output:5d1aad7e] %[output:22eda133] %[output:43ace6f6] %[output:6e9200ce] %[output:398c6bfe] %[output:4e25642a] %[output:25bac2dc] %[output:04903588] %[output:8d9ce638] %[output:6810eb80] %[output:8a981980] %[output:377ff7d8] %[output:672f4dd4] %[output:0c494ea7] %[output:92af5644] %[output:2d389d69] %[output:9c5a2498] %[output:5b3b2fa3] %[output:54650cea] %[output:674199b4] %[output:819cc543] %[output:89ba82e2] %[output:97f08a82] %[output:4684e91e] %[output:10acab80] %[output:116bb5bc] %[output:333a26af] %[output:7f0086ae] %[output:5b5554f6] %[output:5d7bfc15] %[output:4732e02d] %[output:04662dce] %[output:5251a5bf] %[output:5810b6dc] %[output:5378bc5d] %[output:54a20a44] %[output:988a7bc6] %[output:738c1ce4] %[output:1f639db1] %[output:27d97f6d] %[output:0449f221] %[output:0e2657db] %[output:6e20f8c2] %[output:6c3b7baf] %[output:9c5f9cef] %[output:967dafb4] %[output:984ec33d] %[output:271bdb0d] %[output:7fd4857a] %[output:5c0b757d] %[output:2bbdee8a] %[output:24c7b30b] %[output:7624a85d] %[output:6dc5a9e1] %[output:82e5210c] %[output:41d2d5d0] %[output:633a70fb] %[output:03f7d190] %[output:9f9cac9c] %[output:50c3557c] %[output:087b607a] %[output:446da65e] %[output:55089fb0] %[output:9ffef0b8] %[output:547ab557] %[output:012e47ed] %[output:38a66f3c] %[output:21feb8d6] %[output:3c17935f] %[output:661b339b] %[output:45ddae65] %[output:2ceee33e] %[output:948d86da] %[output:3f746cac] %[output:1a452905] %[output:9a709239] %[output:44081acc] %[output:0e7346aa] %[output:39d8b98b] %[output:8da3da6d] %[output:0fab5a00] %[output:931d4ea5] %[output:9baab387] %[output:2818be8e] %[output:2a557325] %[output:9546c36c] %[output:35d3eb22] %[output:2caa70ba] %[output:1d62cc69] %[output:02e537c4] %[output:06d28d2b] %[output:4248c4e7] %[output:3ea5b68b] %[output:554d52a6] %[output:6187699f] %[output:037c7147] %[output:61df3247] %[output:132a8ca0] %[output:69050d9b] %[output:80e182ca] %[output:11eaec73] %[output:92f61d11] %[output:6eaef428] %[output:27239632] %[output:6355fed7] %[output:4ba22f5a] %[output:63daa423] %[output:50c9e20c] %[output:40c9de46] %[output:9a68a6b6] %[output:9d798a2b] %[output:191d7ef2] %[output:3bcaf8d0] %[output:5964be11] %[output:32cb6b00] %[output:0ca1a68a] %[output:4481ff8f] %[output:74331512] %[output:5145b9bd] %[output:4bf2035e] %[output:2ae281d3] %[output:97da9616] %[output:72857080] %[output:60a9d174]
-            s10 = r.amplitude(r.frequency>9 & r.frequency <11,1:2);
-            s5 = r.amplitude(r.frequency>4 & r.frequency <6,1:2);            
-            thisPct5 = mean(100*abs((s5(:,2)-s5(:,1))./s5(:,1)),"omitmissing");
-            thisPct10 = mean(100*abs((s10(:,2)-s10(:,1))./s10(:,1)),"omitmissing");        
-            pctError = [pctError; table(string(thisRestData.subject),arMode,thisPct5,thisPct10,'VariableNames',{'subject','arMode','e5','e10'})];            %#ok<AGROW>
-        end
+            thisPctError = cleanAndEstimatePower(A,ar,arMode);
+            pctError = [pctError;thisPctError]; %#ok<AGROW>
+        end %[output:6eb2c434] %[output:04075bb0] %[output:8934818e] %[output:3eee7ea0] %[output:7a077834] %[output:5d1aad7e] %[output:22eda133] %[output:43ace6f6] %[output:6e9200ce] %[output:398c6bfe] %[output:4e25642a] %[output:25bac2dc] %[output:04903588] %[output:8d9ce638] %[output:6810eb80] %[output:8a981980] %[output:377ff7d8] %[output:672f4dd4] %[output:0c494ea7] %[output:92af5644] %[output:2d389d69] %[output:9c5a2498] %[output:5b3b2fa3] %[output:54650cea] %[output:674199b4] %[output:819cc543] %[output:89ba82e2] %[output:97f08a82] %[output:4684e91e] %[output:10acab80] %[output:116bb5bc] %[output:333a26af] %[output:7f0086ae] %[output:5b5554f6] %[output:5d7bfc15] %[output:4732e02d] %[output:04662dce] %[output:5251a5bf] %[output:5810b6dc] %[output:5378bc5d] %[output:54a20a44] %[output:988a7bc6] %[output:738c1ce4] %[output:1f639db1] %[output:27d97f6d] %[output:0449f221] %[output:0e2657db] %[output:6e20f8c2] %[output:6c3b7baf] %[output:9c5f9cef] %[output:967dafb4] %[output:984ec33d] %[output:271bdb0d] %[output:7fd4857a] %[output:5c0b757d] %[output:2bbdee8a] %[output:24c7b30b] %[output:7624a85d] %[output:6dc5a9e1] %[output:82e5210c] %[output:41d2d5d0] %[output:633a70fb] %[output:03f7d190] %[output:9f9cac9c] %[output:50c3557c] %[output:087b607a] %[output:446da65e] %[output:55089fb0] %[output:9ffef0b8] %[output:547ab557] %[output:012e47ed] %[output:38a66f3c] %[output:21feb8d6] %[output:3c17935f] %[output:661b339b] %[output:45ddae65] %[output:2ceee33e] %[output:948d86da] %[output:3f746cac] %[output:1a452905] %[output:9a709239] %[output:44081acc] %[output:0e7346aa] %[output:39d8b98b] %[output:8da3da6d] %[output:0fab5a00] %[output:931d4ea5] %[output:9baab387] %[output:2818be8e] %[output:2a557325] %[output:9546c36c] %[output:35d3eb22] %[output:2caa70ba] %[output:1d62cc69] %[output:02e537c4] %[output:06d28d2b] %[output:4248c4e7] %[output:3ea5b68b] %[output:554d52a6] %[output:6187699f] %[output:037c7147] %[output:61df3247] %[output:132a8ca0] %[output:69050d9b] %[output:80e182ca] %[output:11eaec73] %[output:92f61d11] %[output:6eaef428] %[output:27239632] %[output:6355fed7] %[output:4ba22f5a] %[output:63daa423] %[output:50c9e20c] %[output:40c9de46] %[output:9a68a6b6] %[output:9d798a2b] %[output:191d7ef2] %[output:3bcaf8d0] %[output:5964be11] %[output:32cb6b00] %[output:0ca1a68a] %[output:4481ff8f] %[output:74331512] %[output:5145b9bd] %[output:4bf2035e] %[output:2ae281d3] %[output:97da9616] %[output:72857080] %[output:60a9d174]
     end
 else
-    % Read subject.rest.mat data from ../data
-
+    % Read subject.rest.mat data from ../data 
+    subjects = dir('../data/*.rest.mat');
+    for sCntr = 1:numel(subjects)
+        load(subjects(sCntr).folder,subjects(sCntr).name,"eeg");
+        % Add the data to the ArtSim object (focus on electrodes near Oz)
+        readData(A,eeg,format="RAW",channel= [125 126 138 139 117]); 
+        for arMode = arModes               
+            thisPctError = cleanAndEstimatePower(A,ar,arMode);
+            pctError = [pctError;thisPctError]; %#ok<AGROW>
+        end
+    end
 end %[output:group:70b5a62b]
 %%
+%[text] ## Summarize the results
 figure %[output:70ab0732]
 tiledlayout(3,2); %[output:70ab0732]
 for arMode =arModes %[output:group:5f925c9f]
@@ -83,6 +80,17 @@ for arMode =arModes %[output:group:5f925c9f]
             title (arMode +"/" + e + ": " + num2str(median(thisE),1) + "% SD: " + num2str(std(thisE),1) + "%");
     end
 end %[output:group:5f925c9f]
+%%
+%[text] ## Helper Functions
+function pctError = cleanAndEstimatePower(o,ar,arMode)
+
+r  = simPlotEEG(o,ar,arMode,freqRes =1,axs=[]);
+s10 = r.amplitude(r.frequency>9 & r.frequency <11,1:2);
+s5 = r.amplitude(r.frequency>4 & r.frequency <6,1:2);            
+thisPct5 = mean(100*abs((s5(:,2)-s5(:,1))./s5(:,1)),"omitmissing");
+thisPct10 = mean(100*abs((s10(:,2)-s10(:,1))./s10(:,1)),"omitmissing");        
+pctError = table(string(thisRestData.subject),arMode,thisPct5,thisPct10,'VariableNames',{'subject','arMode','e5','e10'});
+end
 
 
 %[appendix]{"version":"1.0"}

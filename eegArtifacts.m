@@ -52,7 +52,7 @@ arDefaults.segmentDuration          = 3;
 eeg                   = artSim(eegDefaults);
 eeg.tacsAmplitude     = 1e-3;    % 1 mA 
 eeg.resistance        = 15;     % 1 mA - > 100 mV artifact
-eeg.tacsFrequency     = 30;      % 10 Hz
+eeg.tacsFrequency     = 10;      % 10 Hz
 
 %[text] First, investigate the FASTR algorithm (Niazy et al.). Match the artificat removal parameters to the data
 ar                          = arDefaults;
@@ -82,14 +82,14 @@ eeg.lfpPeakWidth              = 1;         % Oscillation bandwidth.
 [~,axs5] = fig('Name','Fig5','paperCols',2,'height',5,'nrRows',1,'nrCols',3,'byColumn',false); %[output:1c9bc7fc]
 %[text] %[text:anchor:H_218F3721] ### FASTR
 
-simPlotEEG(eeg,ar,'FASTR',freqRes =0.1,axs=[axs4(1) gobjects(1) axs5(1)]); %[output:2692722e] %[output:1786772a] %[output:71cbdf12] %[output:9a30516c] %[output:1c9bc7fc]
+rFastr= simPlotEEG(eeg,ar,'FASTR',freqRes =0.1,axs=[axs4(1) gobjects(1) axs5(1)]); %[output:2692722e] %[output:1786772a] %[output:71cbdf12] %[output:9a30516c] %[output:1c9bc7fc]
 %[text] ### FBAR
 %[text] We continue analyzing the same data, but now with a Fourier based algorithm (FBAR), using the same parameters
 
-simPlotEEG(eeg,ar,'FBAR',freqRes =0.1,axs=[axs4(2) gobjects(1)  axs5(2)]); %[output:0903f33f] %[output:9a30516c] %[output:1c9bc7fc]
+rFbar= simPlotEEG(eeg,ar,'FBAR',freqRes =0.1,axs=[axs4(2) gobjects(1)  axs5(2)]); %[output:0903f33f] %[output:9a30516c] %[output:1c9bc7fc]
 %[text] %[text:anchor:H_AAE631F7] ### RBAR
 %[text] And a regression based method:
-simPlotEEG(eeg,ar,'RBAR',freqRes =0.1,axs=[axs4(3)  gobjects(1) axs5(3)]); %[output:9a30516c] %[output:9c9e3bcc] %[output:1c9bc7fc]
+rRbar = simPlotEEG(eeg,ar,'RBAR',freqRes =0.1,axs=[axs4(3)  gobjects(1) axs5(3)]); %[output:9a30516c] %[output:9c9e3bcc] %[output:1c9bc7fc]
 
 yylinkaxes(axs5); % After plots have been generated - link to get the same scale %[output:1c9bc7fc]
 

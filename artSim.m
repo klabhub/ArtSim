@@ -66,16 +66,16 @@ classdef artSim < handle
         multiplicative            = 0;        % Standard deviation of the multiplicative noise
 
         %% Properties of the ADC converter.
-        adcLinearRange            = 6.4e-3;     % [V] Range over which the amplifier is linear
+        adcLinearRange            = 100e-3;    % [V] Range over which the amplifier is linear
         adcNonlinearity           = 100;       % The saturation profile of the amplifier near the edge
         %                                       of the linear range. 2 = very sigmoidal, 100 = linear inside the range,
         %                                       saturation outside (i.e. piecewise linear). See amplify
-        adcRange                   = 10e-3;     % The range of the ADC; bits are distributed evenly across this +/- range.
-        adcBitDepth                = 16;       % Number of bits in the ADC
-        adcGain                    = 1;        % Amplifier gain
+        adcRange                  = 100e-3;     % The range of the ADC; bits are distributed evenly across this +/- range.
+        adcBitDepth               = 24;       % Number of bits in the ADC
+        adcGain                   = 1;        % Amplifier gain
 
         highPass                  = 0;        % [Hz] Highpass cutoff of the pre-amplification hardware filter.
-        lowPass                    = 0;        %[Hz] lowpass cutoff of the post-amplification, post-digitization filter.
+        lowPass                   = 0;        % [Hz] lowpass cutoff of the post-amplification, post-digitization filter.
     end
     properties (SetAccess= protected, GetAccess=public)
         tSimulate;  % The internal time of simulation
@@ -230,8 +230,8 @@ classdef artSim < handle
             %
             arguments
                 o (1,1) artSim
-                src (1,1) struct % The EEGLAB EEG struct or a Fieldtrip data struct
-                pv.format (1,1) string {mustBeMember(pv.format,["EEGLAB" "FIELDTRIP"])} = "EEGLAB";
+                src  % The EEGLAB EEG struct or a Fieldtrip data struct, or a matrix of doubles with samples along the first dimension, channels along the second
+                pv.format (1,1) string {mustBeMember(pv.format,["EEGLAB" "FIELDTRIP" "RAW"])} = "EEGLAB";
                 pv.channel (1,:) =1 % Which channel(s) to use from a multichannel dataset (will be averaged)
                 pv.trial  (1,:) = 1 % Which trial(s) to use
             end
@@ -252,13 +252,17 @@ classdef artSim < handle
                     cfg.latency = min(src.time{1})+[0 o.duration-1/src.hdr.Fs];
                     src = ft_selectdata(cfg,src); % Select channel and time window
                     data  = cat(2,src.trial{:})'/1e6;  % Make continuous data in V.
+                case "RAW"
+                    [nrSmples,nrChnls] = size(src); %#ok<ASGLU>
+                    assert(nrSmples==o.recordingSamplingRate*o.duration,"The number of samples in this array does not match duration*recordingSamplingRate");
+                    data =src;
             end
             data = mean(data,2,"omitmissing"); % Average over channels
             % Fill missing  with linear interpolation (to avoid having nans)
             data = fillmissing(data,"linear");
             % Upsample to quasi continuous sampling rate to match the simulated data
             data = resample(data,o.quasiContinuousSamplingRate, o.recordingSamplingRate);
-            o.lfp = data -mean(data,"omitmissing");
+            o.lfp = data -mean(data,1,"omitmissing");
             o.fromData = true;
             fprintf('Using %.1f s of data from the %s struct.\n',o.duration, pv.format);
         end
