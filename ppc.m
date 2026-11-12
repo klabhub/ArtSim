@@ -24,7 +24,7 @@ arguments
 end
 if iscell(spikeIx) 
     % Evaluate the PPC/PLV for the two vectors of spike indices in the cell array,
-    % then determine whether these PLLs are significantly different.     
+    % then determine whether these PPCs are significantly different.     
     ppcStim = locPpc(spikeIx{1},phase(:,1));
     ppcNoStim = locPpc(spikeIx{2},phase(:,2));
     deltaPlv = abs(ppcStim-ppcNoStim);
