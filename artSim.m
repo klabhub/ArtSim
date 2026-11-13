@@ -222,7 +222,7 @@ classdef artSim < handle
             end
         end
 
-        function readData(o,src,pv)
+        function data = readData(o,src,pv)
             % This function loads EEG or LFP data to serve as ground truth.
             % Two example formats are provided; an EEGLAB EEG struct or a
             % Fieldtrip data struct.
@@ -253,18 +253,20 @@ classdef artSim < handle
                     src = ft_selectdata(cfg,src); % Select channel and time window
                     data  = cat(2,src.trial{:})'/1e6;  % Make continuous data in V.
                 case "RAW"
+                    % A vector of doubles sampled at
+                    % o.recordingSamplingRate
                     [nrSmples,nrChnls] = size(src); %#ok<ASGLU>
-                    assert(nrSmples==o.recordingSamplingRate*o.duration,"The number of samples in this array does not match duration*recordingSamplingRate");
-                    data =src;
+                    assert(nrSmples==o.recordingSamplingRate*o.duration,"The number of samples in this array (%d) does not match o.recordingSamplingRate*o.duration (%d)",nrSmples,o.recordingSamplingRate*o.duration);
+                    data = src;                    
             end
             data = mean(data,2,"omitmissing"); % Average over channels
             % Fill missing  with linear interpolation (to avoid having nans)
             data = fillmissing(data,"linear");
             % Upsample to quasi continuous sampling rate to match the simulated data
-            data = resample(data,o.quasiContinuousSamplingRate, o.recordingSamplingRate);
-            o.lfp = data -mean(data,1,"omitmissing");
+            o.lfp = resample(data,o.quasiContinuousSamplingRate, o.recordingSamplingRate);
+            o.lfp = o.lfp -mean(o.lfp,1,"omitmissing");
             o.fromData = true;
-            fprintf('Using %.1f s of data from the %s struct.\n',o.duration, pv.format);
+            fprintf('Using %.1f s of %s data.\n',o.duration, pv.format);
         end
 
         function simLfp(o)

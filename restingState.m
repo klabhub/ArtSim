@@ -13,6 +13,7 @@ defaults.stimulatorSamplingRate    = 1e3;     % 1 kHz
 defaults.currentResolution         = 1e-6;    % 1 muA
 defaults.highPass                  = 0.01;    % Analog filter of the recording amplifier
 defaults.lowPass                   = 100;
+defaults.recordingSamplingRate     = 250;
 %[text] Experiment:
 defaults.duration                  = 4*60;   % 4 min of data
 defaults.tacsAmplitude              = 1e-3;    % 1 mA 
@@ -37,37 +38,38 @@ ar                          = arDefaults;
 ar.tacsFrequency            = A.tacsFrequency;
 arModes = ["RBAR" "FBAR" "FASTR"];
 
-sCntr =0;
+
 pctError = table();
-if ~isempty(getenv("DJ_HOST")) %[output:group:70b5a62b]
+if ~isempty(getenv("DJ_HOST")) && false %[output:group:6f8eda59]
     %% kLab only: retrieve the data from the datajoint server,
     allRestData = ns.Epoch & 'dimension="rest"' & (ns.Experiment & 'paradigm ="rvsRestingState"');    
-    for thisRestData = fetch(allRestData,'LIMIT 1000')'
+    sCntr =0;
+    for thisRestData = fetch(allRestData)'
         sCntr = sCntr+1;
         % Extract a Fieldtrip dataset
         ft = ephys.fieldtrip.dataset(thisRestData,dimension="rest");
         % Add the data to the ArtSim object (focus on electrodes near Oz)
-        readData(A,ft,format="FIELDTRIP",channel= [125 126 138 139 117]);  %[output:2c917c69] %[output:91a41098] %[output:2136ce8d] %[output:61ad4bf2] %[output:1d0d7ab6] %[output:5aba44f9] %[output:2263ff40] %[output:05358d77] %[output:12910a9d] %[output:6e96ea19] %[output:574ff6b2] %[output:81ffdf67] %[output:08fdaa23] %[output:0502f6f1] %[output:0f3e534a] %[output:7eefe2ce] %[output:0b6286ef] %[output:7eea4e94] %[output:326d6b68] %[output:56d6a53d] %[output:95dab388] %[output:0b4eca9a] %[output:3437fbc3] %[output:39315419] %[output:19cc06d9] %[output:59e2592f] %[output:4df70499] %[output:0b53f928] %[output:564d0868] %[output:36c5b67b] %[output:17f8f3b4] %[output:5e791eed] %[output:95bf8e5d] %[output:105b4d40] %[output:6ed9e5b3] %[output:81b3658d] %[output:33f9cd8d] %[output:2d13d719] %[output:98de3323] %[output:1eb33065] %[output:4a3ac4f1] %[output:7c28e181] %[output:437e8855]
-        eeg = A.lfp;
+        eeg = readData(A,ft,format="FIELDTRIP",channel= [125 126 138 139 117]);         
+        % Save the data for future use without database access.
         save("../data/" + thisRestData.subject  + ".rest.mat","eeg");
         for arMode = arModes               
-            thisPctError = cleanAndEstimatePower(A,ar,arMode);
-            pctError = [pctError;thisPctError]; %#ok<AGROW>
-        end %[output:6eb2c434] %[output:04075bb0] %[output:8934818e] %[output:3eee7ea0] %[output:7a077834] %[output:5d1aad7e] %[output:22eda133] %[output:43ace6f6] %[output:6e9200ce] %[output:398c6bfe] %[output:4e25642a] %[output:25bac2dc] %[output:04903588] %[output:8d9ce638] %[output:6810eb80] %[output:8a981980] %[output:377ff7d8] %[output:672f4dd4] %[output:0c494ea7] %[output:92af5644] %[output:2d389d69] %[output:9c5a2498] %[output:5b3b2fa3] %[output:54650cea] %[output:674199b4] %[output:819cc543] %[output:89ba82e2] %[output:97f08a82] %[output:4684e91e] %[output:10acab80] %[output:116bb5bc] %[output:333a26af] %[output:7f0086ae] %[output:5b5554f6] %[output:5d7bfc15] %[output:4732e02d] %[output:04662dce] %[output:5251a5bf] %[output:5810b6dc] %[output:5378bc5d] %[output:54a20a44] %[output:988a7bc6] %[output:738c1ce4] %[output:1f639db1] %[output:27d97f6d] %[output:0449f221] %[output:0e2657db] %[output:6e20f8c2] %[output:6c3b7baf] %[output:9c5f9cef] %[output:967dafb4] %[output:984ec33d] %[output:271bdb0d] %[output:7fd4857a] %[output:5c0b757d] %[output:2bbdee8a] %[output:24c7b30b] %[output:7624a85d] %[output:6dc5a9e1] %[output:82e5210c] %[output:41d2d5d0] %[output:633a70fb] %[output:03f7d190] %[output:9f9cac9c] %[output:50c3557c] %[output:087b607a] %[output:446da65e] %[output:55089fb0] %[output:9ffef0b8] %[output:547ab557] %[output:012e47ed] %[output:38a66f3c] %[output:21feb8d6] %[output:3c17935f] %[output:661b339b] %[output:45ddae65] %[output:2ceee33e] %[output:948d86da] %[output:3f746cac] %[output:1a452905] %[output:9a709239] %[output:44081acc] %[output:0e7346aa] %[output:39d8b98b] %[output:8da3da6d] %[output:0fab5a00] %[output:931d4ea5] %[output:9baab387] %[output:2818be8e] %[output:2a557325] %[output:9546c36c] %[output:35d3eb22] %[output:2caa70ba] %[output:1d62cc69] %[output:02e537c4] %[output:06d28d2b] %[output:4248c4e7] %[output:3ea5b68b] %[output:554d52a6] %[output:6187699f] %[output:037c7147] %[output:61df3247] %[output:132a8ca0] %[output:69050d9b] %[output:80e182ca] %[output:11eaec73] %[output:92f61d11] %[output:6eaef428] %[output:27239632] %[output:6355fed7] %[output:4ba22f5a] %[output:63daa423] %[output:50c9e20c] %[output:40c9de46] %[output:9a68a6b6] %[output:9d798a2b] %[output:191d7ef2] %[output:3bcaf8d0] %[output:5964be11] %[output:32cb6b00] %[output:0ca1a68a] %[output:4481ff8f] %[output:74331512] %[output:5145b9bd] %[output:4bf2035e] %[output:2ae281d3] %[output:97da9616] %[output:72857080] %[output:60a9d174]
-    end
-else
-    % Read subject.rest.mat data from ../data 
-    subjects = dir('../data/*.rest.mat');
-    for sCntr = 1:numel(subjects)
-        load(subjects(sCntr).folder,subjects(sCntr).name,"eeg");
-        % Add the data to the ArtSim object (focus on electrodes near Oz)
-        readData(A,eeg,format="RAW",channel= [125 126 138 139 117]); 
-        for arMode = arModes               
-            thisPctError = cleanAndEstimatePower(A,ar,arMode);
+            thisPctError = cleanAndEstimatePower(A,ar,arMode,thisRestData.subject);
             pctError = [pctError;thisPctError]; %#ok<AGROW>
         end
     end
-end %[output:group:70b5a62b]
+else
+    % Read subject.rest.mat data from ../data created by the code abobe
+    subjects = dir('../data/*.rest.mat');
+    for sCntr = 1:numel(subjects)
+        load(fullfile(subjects(sCntr).folder,subjects(sCntr).name),"eeg");
+        % Add the data to the ArtSim object (focus on electrodes near Oz)
+        readData(A,eeg,format="RAW",channel= [125 126 138 139 117]);  %[output:6e76908b] %[output:18e88981] %[output:9afbfc7d] %[output:2733656e] %[output:7c45ded7] %[output:4ecc6ffb] %[output:2843b0ba] %[output:544bbf6c] %[output:8f581fb7] %[output:6aae124b] %[output:4336304a] %[output:23985348] %[output:956c781d] %[output:0a3e506b] %[output:4efbe68f] %[output:734af950] %[output:0f211e6e] %[output:93482ee6] %[output:338c7722] %[output:565458d5] %[output:01fc80a2] %[output:5a393e9a] %[output:72713035] %[output:8927da9d] %[output:6ead7dc4] %[output:396b2734] %[output:46087d98]
+        for arMode = arModes               
+            thisPctError = cleanAndEstimatePower(A,ar,arMode,extractBefore(subjects(sCntr).name,".rest.mat")); %[output:1b4cbd2f] %[output:1b89b174] %[output:059aba78] %[output:8272f826] %[output:4da93917] %[output:90086f90] %[output:58abf7e3] %[output:2969cf7a] %[output:62b6e94d] %[output:4020842c] %[output:4d0341e7] %[output:3f99c3a5] %[output:8e19b20b] %[output:4fbbc53e] %[output:9d45243f] %[output:503287e7] %[output:8d9a8b7a] %[output:90f6b5f8] %[output:682e5da1] %[output:0f5f2451] %[output:69cb7e61] %[output:6ea0daa2] %[output:387be710] %[output:4efaf9c7] %[output:44da7429] %[output:9534d4b4] %[output:136ec0c3] %[output:63acea6d] %[output:35f204e6] %[output:27020378] %[output:3f45bc1b] %[output:128be23c] %[output:917a59cd] %[output:5b0aaa32] %[output:14085279] %[output:469d40ea] %[output:28892c8b] %[output:10c20afb] %[output:43df5a9d] %[output:4c23c1a8] %[output:611a36b2] %[output:4032f9d3] %[output:8fcde6f3] %[output:480a9f12] %[output:9cc25b1c] %[output:00562850] %[output:128cbb43] %[output:8736beca] %[output:77c78d20] %[output:99b43421] %[output:19e4bff7] %[output:973ec693] %[output:5923081a] %[output:44dc52b1] %[output:6afd1434] %[output:2e1b636a] %[output:48a354c4] %[output:5d8e6577] %[output:572d0ab0] %[output:8d42e345] %[output:4869747d] %[output:08b15ee4] %[output:237161ab] %[output:918abdb6] %[output:90728558] %[output:5125bbce] %[output:2fe8c8a1] %[output:5d2383e2] %[output:1c7d796a] %[output:4d18e78a] %[output:76589a7a] %[output:5180fd7c] %[output:2e974166] %[output:468d7a24] %[output:9da770da] %[output:83190844] %[output:75e301c5] %[output:4af4b559] %[output:3105f2b4] %[output:23f9252a] %[output:72f65666]
+            pctError = [pctError;thisPctError]; %#ok<AGROW>
+        end
+    end
+end %[output:group:6f8eda59]
 %%
 %[text] ## Summarize the results
 figure %[output:70ab0732]
@@ -77,19 +79,20 @@ for arMode =arModes %[output:group:5f925c9f]
         nexttile %[output:70ab0732]
             thisE = pctError{pctError.arMode==arMode,e};
             histogram(thisE,BinMethod="fd");
-            title (arMode +"/" + e + ": " + num2str(median(thisE),1) + "% SD: " + num2str(std(thisE),1) + "%");
+            title (arMode +"/" + e + ": " + num2str(median(thisE),2) + "% SD: " + num2str(std(thisE),2) + "%");
     end
 end %[output:group:5f925c9f]
 %%
 %[text] ## Helper Functions
-function pctError = cleanAndEstimatePower(o,ar,arMode)
+%[text] Simple example analysis; remove artifacts, then estimate the power at 10 Hz and 5 Hz, and return the errors as a percentage.
+function pctError = cleanAndEstimatePower(o,ar,arMode,subject)
 
 r  = simPlotEEG(o,ar,arMode,freqRes =1,axs=[]);
 s10 = r.amplitude(r.frequency>9 & r.frequency <11,1:2);
 s5 = r.amplitude(r.frequency>4 & r.frequency <6,1:2);            
 thisPct5 = mean(100*abs((s5(:,2)-s5(:,1))./s5(:,1)),"omitmissing");
 thisPct10 = mean(100*abs((s10(:,2)-s10(:,1))./s10(:,1)),"omitmissing");        
-pctError = table(string(thisRestData.subject),arMode,thisPct5,thisPct10,'VariableNames',{'subject','arMode','e5','e10'});
+pctError = table(string(subject),arMode,thisPct5,thisPct10,'VariableNames',{'subject','arMode','e5','e10'});
 end
 
 
@@ -98,522 +101,330 @@ end
 %[metadata:view]
 %   data: {"layout":"inline","rightPanelPercent":40}
 %---
-%[output:2c917c69]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 2 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:6e76908b]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:6eb2c434]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 3.8%)\nFBAR (r=0.86 rmse = 31\/0 muV ae = 14.3%)\nAllocating memory...\n","truncated":false}}
+%[output:1b4cbd2f]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.02 rmse = 66\/0 muV ae = 23.2%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:04075bb0]
+%[output:1b89b174]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:8934818e]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 1 sec.\nFASTR (r=0.86 rmse = 18\/0 muV ae = 33.1%)\n","truncated":false}}
+%[output:059aba78]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.02 rmse = 47\/0 muV ae = 123.3%)\n","truncated":false}}
 %---
-%[output:91a41098]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 2 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:18e88981]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:3eee7ea0]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.02 rmse = 31\/0 muV ae = 10.5%)\nAllocating memory...\n","truncated":false}}
+%[output:8272f826]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=0.99 rmse = 0\/0 muV ae = 0.4%)\nFBAR (r=0.05 rmse = 66\/0 muV ae = 22.0%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:7a077834]
+%[output:4da93917]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:5d1aad7e]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.04 rmse = 21\/0 muV ae = 31.8%)\n","truncated":false}}
+%[output:90086f90]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.04 rmse = 47\/0 muV ae = 69.4%)\n","truncated":false}}
 %---
-%[output:2136ce8d]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:9afbfc7d]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:22eda133]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.01 rmse = 31\/0 muV ae = 22.0%)\nAllocating memory...\n","truncated":false}}
+%[output:58abf7e3]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=-0.01 rmse = 66\/0 muV ae = 31.5%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:43ace6f6]
+%[output:2969cf7a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:6e9200ce]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.02 rmse = 21\/0 muV ae = 108.2%)\n","truncated":false}}
+%[output:62b6e94d]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.00 rmse = 47\/0 muV ae = 97.1%)\n","truncated":false}}
 %---
-%[output:61ad4bf2]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:2733656e]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:398c6bfe]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 1.1%)\nFBAR (r=0.79 rmse = 31\/0 muV ae = 9.8%)\nAllocating memory...\n","truncated":false}}
+%[output:4020842c]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=-0.01 rmse = 66\/0 muV ae = 38.6%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:4e25642a]
+%[output:4d0341e7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:25bac2dc]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.74 rmse = 15\/0 muV ae = 50.3%)\n","truncated":false}}
+%[output:3f99c3a5]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=-0.00 rmse = 47\/0 muV ae = 135.2%)\n","truncated":false}}
 %---
-%[output:1d0d7ab6]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 1 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:7c45ded7]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:04903588]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.1%)\nFBAR (r=0.25 rmse = 30\/0 muV ae = 9.8%)\nAllocating memory...\n","truncated":false}}
+%[output:8e19b20b]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 1.1%)\nFBAR (r=0.83 rmse = 66\/0 muV ae = 9.1%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:8d9ce638]
+%[output:4fbbc53e]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:6810eb80]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.27 rmse = 21\/0 muV ae = 41.4%)\n","truncated":false}}
+%[output:9d45243f]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.78 rmse = 84\/0 muV ae = 97.1%)\n","truncated":false}}
 %---
-%[output:5aba44f9]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:4ecc6ffb]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:8a981980]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.15 rmse = 31\/0 muV ae = 13.2%)\nAllocating memory...\n","truncated":false}}
+%[output:503287e7]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.4%)\nFBAR (r=0.08 rmse = 66\/0 muV ae = 22.1%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:377ff7d8]
+%[output:8d9a8b7a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:672f4dd4]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.15 rmse = 21\/0 muV ae = 29.1%)\n","truncated":false}}
+%[output:90f6b5f8]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.06 rmse = 47\/0 muV ae = 125.1%)\n","truncated":false}}
 %---
-%[output:2263ff40]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:2843b0ba]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:0c494ea7]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=-0.01 rmse = 31\/0 muV ae = 18.4%)\nAllocating memory...\n","truncated":false}}
+%[output:682e5da1]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.76 rmse = 66\/0 muV ae = 15.6%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:92af5644]
+%[output:0f5f2451]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:2d389d69]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.00 rmse = 21\/0 muV ae = 101.9%)\n","truncated":false}}
+%[output:69cb7e61]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.77 rmse = 43\/0 muV ae = 34.7%)\n","truncated":false}}
 %---
-%[output:05358d77]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:544bbf6c]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:9c5a2498]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.02 rmse = 31\/0 muV ae = 27.1%)\nAllocating memory...\n","truncated":false}}
+%[output:6ea0daa2]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=0.99 rmse = 0\/0 muV ae = 0.6%)\nFBAR (r=0.21 rmse = 66\/0 muV ae = 18.0%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:5b3b2fa3]
+%[output:387be710]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:54650cea]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.03 rmse = 21\/0 muV ae = 73.3%)\n","truncated":false}}
+%[output:4efaf9c7]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.22 rmse = 47\/0 muV ae = 54.7%)\n","truncated":false}}
 %---
-%[output:12910a9d]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:8f581fb7]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:674199b4]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.6%)\nFBAR (r=0.75 rmse = 31\/0 muV ae = 11.3%)\nAllocating memory...\n","truncated":false}}
+%[output:44da7429]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.1%)\nFBAR (r=0.59 rmse = 66\/0 muV ae = 10.9%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:819cc543]
+%[output:9534d4b4]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:89ba82e2]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.70 rmse = 15\/0 muV ae = 58.6%)\n","truncated":false}}
+%[output:136ec0c3]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.52 rmse = 39\/0 muV ae = 118.1%)\n","truncated":false}}
 %---
-%[output:6e96ea19]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:6aae124b]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:97f08a82]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.11 rmse = 31\/0 muV ae = 18.5%)\nAllocating memory...\n","truncated":false}}
+%[output:63acea6d]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.16 rmse = 66\/0 muV ae = 19.2%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:4684e91e]
+%[output:35f204e6]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:10acab80]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.14 rmse = 21\/0 muV ae = 50.3%)\n","truncated":false}}
+%[output:27020378]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.15 rmse = 47\/0 muV ae = 82.4%)\n","truncated":false}}
 %---
-%[output:574ff6b2]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:4336304a]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:116bb5bc]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.9%)\nFBAR (r=0.72 rmse = 31\/0 muV ae = 15.8%)\nAllocating memory...\n","truncated":false}}
+%[output:3f45bc1b]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 8.1%)\nFBAR (r=0.96 rmse = 66\/0 muV ae = 31.2%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:333a26af]
+%[output:128be23c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:7f0086ae]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.72 rmse = 20\/0 muV ae = 41.0%)\n","truncated":false}}
+%[output:917a59cd]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.94 rmse = 50\/0 muV ae = 360.1%)\n","truncated":false}}
 %---
-%[output:81ffdf67]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:23985348]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:5b5554f6]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.21 rmse = 31\/0 muV ae = 6.5%)\nAllocating memory...\n","truncated":false}}
+%[output:5b0aaa32]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.06 rmse = 66\/0 muV ae = 13.1%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:5d7bfc15]
+%[output:14085279]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:4732e02d]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.21 rmse = 21\/0 muV ae = 39.9%)\n","truncated":false}}
+%[output:469d40ea]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.06 rmse = 47\/0 muV ae = 82.6%)\n","truncated":false}}
 %---
-%[output:08fdaa23]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:956c781d]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:04662dce]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=-0.03 rmse = 31\/0 muV ae = 17.2%)\nAllocating memory...\n","truncated":false}}
+%[output:28892c8b]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.06 rmse = 66\/0 muV ae = 29.2%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:5251a5bf]
+%[output:10c20afb]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:5810b6dc]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=-0.02 rmse = 21\/0 muV ae = 78.8%)\n","truncated":false}}
+%[output:43df5a9d]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.06 rmse = 47\/0 muV ae = 104.8%)\n","truncated":false}}
 %---
-%[output:0502f6f1]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:0a3e506b]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:5378bc5d]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.06 rmse = 31\/0 muV ae = 13.9%)\nAllocating memory...\n","truncated":false}}
+%[output:4c23c1a8]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.64 rmse = 66\/0 muV ae = 19.6%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:54a20a44]
+%[output:611a36b2]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:988a7bc6]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.06 rmse = 21\/0 muV ae = 47.6%)\n","truncated":false}}
+%[output:4032f9d3]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.64 rmse = 45\/0 muV ae = 69.2%)\n","truncated":false}}
 %---
-%[output:0f3e534a]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:4efbe68f]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:738c1ce4]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.08 rmse = 30\/0 muV ae = 12.3%)\nAllocating memory...\n","truncated":false}}
+%[output:8fcde6f3]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=-0.04 rmse = 66\/0 muV ae = 16.5%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:1f639db1]
+%[output:480a9f12]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:27d97f6d]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.09 rmse = 21\/0 muV ae = 32.3%)\n","truncated":false}}
+%[output:9cc25b1c]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=-0.02 rmse = 47\/0 muV ae = 158.0%)\n","truncated":false}}
 %---
-%[output:7eefe2ce]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:734af950]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:0449f221]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.10 rmse = 31\/0 muV ae = 14.0%)\nAllocating memory...\n","truncated":false}}
+%[output:00562850]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=0.99 rmse = 0\/0 muV ae = 0.5%)\nFBAR (r=-0.00 rmse = 67\/0 muV ae = 28.0%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:0e2657db]
+%[output:128cbb43]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:6e20f8c2]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.09 rmse = 21\/0 muV ae = 48.7%)\n","truncated":false}}
+%[output:8736beca]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.00 rmse = 47\/0 muV ae = 102.0%)\n","truncated":false}}
 %---
-%[output:0b6286ef]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:0f211e6e]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:6c3b7baf]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.1%)\nFBAR (r=0.18 rmse = 31\/0 muV ae = 12.9%)\nAllocating memory...\n","truncated":false}}
+%[output:77c78d20]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.06 rmse = 66\/0 muV ae = 14.7%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:9c5f9cef]
+%[output:99b43421]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:967dafb4]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.17 rmse = 21\/0 muV ae = 56.5%)\n","truncated":false}}
+%[output:19e4bff7]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.04 rmse = 47\/0 muV ae = 67.3%)\n","truncated":false}}
 %---
-%[output:7eea4e94]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:93482ee6]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:984ec33d]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.00 rmse = 31\/0 muV ae = 22.0%)\nAllocating memory...\n","truncated":false}}
+%[output:973ec693]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 1\/0 muV ae = 11.9%)\nFBAR (r=0.98 rmse = 66\/0 muV ae = 17.1%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:271bdb0d]
+%[output:5923081a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:7fd4857a]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.02 rmse = 21\/0 muV ae = 80.2%)\n","truncated":false}}
+%[output:44dc52b1]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.95 rmse = 174\/0 muV ae = 203.2%)\n","truncated":false}}
 %---
-%[output:326d6b68]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:338c7722]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:5c0b757d]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 5.1%)\nFBAR (r=0.96 rmse = 30\/0 muV ae = 12.3%)\nAllocating memory...\n","truncated":false}}
+%[output:6afd1434]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.4%)\nFBAR (r=0.10 rmse = 66\/0 muV ae = 19.5%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:2bbdee8a]
+%[output:2e1b636a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:24c7b30b]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.93 rmse = 27\/0 muV ae = 63.5%)\n","truncated":false}}
+%[output:48a354c4]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.09 rmse = 47\/0 muV ae = 63.5%)\n","truncated":false}}
 %---
-%[output:56d6a53d]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:565458d5]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:7624a85d]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.10 rmse = 31\/0 muV ae = 18.6%)\nAllocating memory...\n","truncated":false}}
+%[output:5d8e6577]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=0.99 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.05 rmse = 66\/0 muV ae = 24.3%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:6dc5a9e1]
+%[output:572d0ab0]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:82e5210c]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.09 rmse = 21\/0 muV ae = 53.1%)\n","truncated":false}}
+%[output:8d42e345]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.04 rmse = 47\/0 muV ae = 50.2%)\n","truncated":false}}
 %---
-%[output:95dab388]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:01fc80a2]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:41d2d5d0]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.02 rmse = 31\/0 muV ae = 17.4%)\nAllocating memory...\n","truncated":false}}
+%[output:4869747d]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.11 rmse = 66\/0 muV ae = 19.4%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:633a70fb]
+%[output:08b15ee4]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:03f7d190]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.03 rmse = 21\/0 muV ae = 74.8%)\n","truncated":false}}
+%[output:237161ab]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.11 rmse = 47\/0 muV ae = 57.1%)\n","truncated":false}}
 %---
-%[output:0b4eca9a]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:5a393e9a]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:9f9cac9c]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.02 rmse = 31\/0 muV ae = 21.8%)\nAllocating memory...\n","truncated":false}}
+%[output:918abdb6]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=-0.03 rmse = 66\/0 muV ae = 33.7%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:50c3557c]
+%[output:90728558]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:087b607a]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.03 rmse = 21\/0 muV ae = 106.2%)\n","truncated":false}}
+%[output:5125bbce]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=-0.02 rmse = 47\/0 muV ae = 234.4%)\n","truncated":false}}
 %---
-%[output:3437fbc3]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:72713035]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:446da65e]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.10 rmse = 31\/0 muV ae = 12.7%)\nAllocating memory...\n","truncated":false}}
+%[output:2fe8c8a1]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=0.99 rmse = 0\/0 muV ae = 0.4%)\nFBAR (r=0.05 rmse = 66\/0 muV ae = 21.8%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:55089fb0]
+%[output:5d2383e2]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:9ffef0b8]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.10 rmse = 21\/0 muV ae = 33.1%)\n","truncated":false}}
+%[output:1c7d796a]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.05 rmse = 47\/0 muV ae = 55.0%)\n","truncated":false}}
 %---
-%[output:39315419]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:8927da9d]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:547ab557]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.12 rmse = 31\/0 muV ae = 8.5%)\nAllocating memory...\n","truncated":false}}
+%[output:4d18e78a]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.05 rmse = 66\/0 muV ae = 25.0%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:012e47ed]
+%[output:76589a7a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:38a66f3c]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.11 rmse = 21\/0 muV ae = 32.6%)\n","truncated":false}}
+%[output:5180fd7c]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.05 rmse = 47\/0 muV ae = 153.7%)\n","truncated":false}}
 %---
-%[output:19cc06d9]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:6ead7dc4]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:21feb8d6]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.09 rmse = 31\/0 muV ae = 15.5%)\nAllocating memory...\n","truncated":false}}
+%[output:2e974166]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.10 rmse = 66\/0 muV ae = 26.4%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:3c17935f]
+%[output:468d7a24]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:661b339b]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.08 rmse = 21\/0 muV ae = 64.5%)\n","truncated":false}}
+%[output:9da770da]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.08 rmse = 46\/0 muV ae = 146.0%)\n","truncated":false}}
 %---
-%[output:59e2592f]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:396b2734]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:45ddae65]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.09 rmse = 30\/0 muV ae = 15.4%)\nAllocating memory...\n","truncated":false}}
+%[output:83190844]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.02 rmse = 66\/0 muV ae = 34.7%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:2ceee33e]
+%[output:75e301c5]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:948d86da]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.08 rmse = 21\/0 muV ae = 48.1%)\n","truncated":false}}
+%[output:4af4b559]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.02 rmse = 47\/0 muV ae = 137.7%)\n","truncated":false}}
 %---
-%[output:4df70499]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
+%[output:46087d98]
+%   data: {"dataType":"text","outputData":{"text":"Using 240.0 s of RAW data.\n","truncated":false}}
 %---
-%[output:3f746cac]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.1%)\nFBAR (r=0.13 rmse = 31\/0 muV ae = 15.4%)\nAllocating memory...\n","truncated":false}}
+%[output:3105f2b4]
+%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.10 rmse = 66\/0 muV ae = 8.8%)\nAllocating memory...\n","truncated":false}}
 %---
-%[output:1a452905]
+%[output:23f9252a]
 %   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
 %---
-%[output:9a709239]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.12 rmse = 21\/0 muV ae = 49.4%)\n","truncated":false}}
-%---
-%[output:0b53f928]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:44081acc]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.21 rmse = 31\/0 muV ae = 15.1%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:0e7346aa]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:39d8b98b]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.20 rmse = 21\/0 muV ae = 46.5%)\n","truncated":false}}
-%---
-%[output:564d0868]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:8da3da6d]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.05 rmse = 31\/0 muV ae = 18.5%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:0fab5a00]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:931d4ea5]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.06 rmse = 21\/0 muV ae = 51.3%)\n","truncated":false}}
-%---
-%[output:36c5b67b]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:9baab387]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.03 rmse = 30\/0 muV ae = 25.7%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:2818be8e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:2a557325]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.03 rmse = 21\/0 muV ae = 60.0%)\n","truncated":false}}
-%---
-%[output:17f8f3b4]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:9546c36c]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.34 rmse = 30\/0 muV ae = 5.8%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:35d3eb22]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:2caa70ba]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.37 rmse = 21\/0 muV ae = 10.9%)\n","truncated":false}}
-%---
-%[output:5e791eed]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 3 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:1d62cc69]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.12 rmse = 31\/0 muV ae = 14.9%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:02e537c4]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:06d28d2b]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.11 rmse = 21\/0 muV ae = 41.1%)\n","truncated":false}}
-%---
-%[output:95bf8e5d]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:4248c4e7]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.04 rmse = 31\/0 muV ae = 23.7%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:3ea5b68b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:554d52a6]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.05 rmse = 21\/0 muV ae = 74.9%)\n","truncated":false}}
-%---
-%[output:105b4d40]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:6187699f]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.3%)\nFBAR (r=0.17 rmse = 30\/0 muV ae = 11.7%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:037c7147]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:61df3247]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.17 rmse = 21\/0 muV ae = 28.0%)\n","truncated":false}}
-%---
-%[output:6ed9e5b3]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:132a8ca0]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.03 rmse = 30\/0 muV ae = 21.7%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:69050d9b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:80e182ca]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.03 rmse = 21\/0 muV ae = 63.1%)\n","truncated":false}}
-%---
-%[output:81b3658d]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:11eaec73]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.03 rmse = 30\/0 muV ae = 8.9%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:92f61d11]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:6eaef428]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.05 rmse = 21\/0 muV ae = 38.3%)\n","truncated":false}}
-%---
-%[output:33f9cd8d]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:27239632]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 7.5%)\nFBAR (r=0.96 rmse = 31\/0 muV ae = 14.9%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:6355fed7]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:4ba22f5a]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.92 rmse = 63\/0 muV ae = 85.7%)\n","truncated":false}}
-%---
-%[output:2d13d719]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:63daa423]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.10 rmse = 31\/0 muV ae = 12.3%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:50c9e20c]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:40c9de46]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.09 rmse = 21\/0 muV ae = 34.9%)\n","truncated":false}}
-%---
-%[output:98de3323]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:9a68a6b6]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 1\/0 muV ae = 35.4%)\nFBAR (r=1.00 rmse = 31\/0 muV ae = 39.6%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:9d798a2b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:191d7ef2]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.97 rmse = 147\/0 muV ae = 187.3%)\n","truncated":false}}
-%---
-%[output:1eb33065]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:3bcaf8d0]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.2%)\nFBAR (r=0.14 rmse = 31\/0 muV ae = 8.1%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:5964be11]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:32cb6b00]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.13 rmse = 21\/0 muV ae = 38.8%)\n","truncated":false}}
-%---
-%[output:4a3ac4f1]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:0ca1a68a]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.1%)\nFBAR (r=0.13 rmse = 31\/0 muV ae = 8.9%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:4481ff8f]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:74331512]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.13 rmse = 21\/0 muV ae = 50.3%)\n","truncated":false}}
-%---
-%[output:7c28e181]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:5145b9bd]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 0\/0 muV ae = 0.1%)\nFBAR (r=0.16 rmse = 31\/0 muV ae = 17.8%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:4bf2035e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:2ae281d3]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.14 rmse = 21\/0 muV ae = 58.3%)\n","truncated":false}}
-%---
-%[output:437e8855]
-%   data: {"dataType":"text","outputData":{"text":"the call to \"ft_selectdata\" took 0 seconds and required the additional allocation of an estimated 0 MB\nUsing 240.0 s of data from the FIELDTRIP struct.\n","truncated":false}}
-%---
-%[output:97da9616]
-%   data: {"dataType":"text","outputData":{"text":"RBAR (r=1.00 rmse = 1\/0 muV ae = 11.2%)\nFBAR (r=0.99 rmse = 31\/0 muV ae = 31.7%)\nAllocating memory...\n","truncated":false}}
-%---
-%[output:72857080]
-%   data: {"dataType":"textualVariable","outputData":{"name":"ans","value":"0.0482"}}
-%---
-%[output:60a9d174]
-%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.97 rmse = 62\/0 muV ae = 195.6%)\n","truncated":false}}
+%[output:72f65666]
+%   data: {"dataType":"text","outputData":{"text":"\nStage 1 of 2: Slice Alignment\n....25% ....50% ....75% ....100%\n\nStage 2 of 2: Artifact Subtraction\n25% 50% 75% 100%\nFASTR Finished in 0 min 0 sec.\nFASTR (r=0.10 rmse = 47\/0 muV ae = 88.0%)\n","truncated":false}}
 %---
 %[output:70ab0732]
-%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAFRCAYAAABqsZcNAAAAAXNSR0IArs4c6QAAIABJREFUeF7tvQu4lUX5\/v+IIqaIKB7wUGEmiGICJWhqHlILPKap5QHD8pxCoaKYIiiiFSKplSKEqagoKBEJpaZ5yBQl0lKQsDLUnxYmSYYc\/P8\/83V2ay\/XXjN7HfZ7WPdcFxew17wzz9zPYe55nnnXXuf9999\/39SEgBAQAkJACAgBIZAhBNYRgcmQtiSqEBACQkAICAEh4BAQgZEhCAEhIASEgBAQAplDQAQmcyqTwEJACAgBISAEhIAIjGxACAgBISAEhIAQyBwCIjCZU5kEFgJCQAgIASEgBERgZANCQAgIASEgBIRA5hAQgcmcyiSwEBACQkAICAEhIAIjGxACQkAICAEhIAQyh4AITOZUJoGFgBAQAkJACAgBERjZgBAQAkJACAgBIZA5BERgMqcyCSwEhIAQEAJCQAiIwMgGhIAQEAJCQAgIgcwhIAJTocr+9Kc\/2aGHHtr09Prrr28f+9jH7LTTTrMvf\/nL7ufFfTp06GDbbLONHX\/88fb1r3+92czXXXedjR8\/3v3s\/PPPtzPPPLPp88mTJ9sVV1zR9P+OHTtaz5497cILL7Q+ffo0G+eb3\/ymbbLJJjZmzJiyK3vsscds0KBBH+rzq1\/9ynbYYYcoVG677Tb7yU9+YkuXLjXWz3NDhw61fffd1z1\/55132jXXXGP\/\/e9\/7bDDDnNrWGeddWz58uV24IEH2pVXXun+bqktXLjQ9fn9739vq1atsq233tr69u1r3\/ve99wjhbgw\/8Ybb2w9evRw+A4cODBqDb7T7Nmz7YYbbrAlS5bY5ptv7vQzePDgVo0R0\/n++++3cePG2SuvvOJs4eyzz26yl9dee80uuugimz9\/vv373\/+27bff3h588MGmYavFM0Y+9WkZgd12283phbbeeuvZlltu6WIA\/rruuuu6nxf3wZb2339\/+853vmMf+chHmgb\/3e9+Z1\/96lfd\/\/fZZx+75ZZbmj6LiS2+s\/fBQjtpaQX4y7Rp02zRokWuy4QJE5xf+vb222\/bqFGjnM2tWbPGPve5z7n\/b7HFFtFm8cILL7hnsOFOnTrZl770JbvgggscXqUav0sYOe644w5jfuLapZde2hTXfvSjH9msWbPs73\/\/u4sdO++8s4t74Jy1GNNabMqtHdywKbDZYIMN7Nvf\/rZ95StfcZiA\/cknn2wPPPCAs9E8NxGYCrVbGGQIUGw+L774ohttzpw51r1792YEhmD15ptvGgQBR5w6dartscceTbMfdNBB9uc\/\/9n9f6eddrJf\/OIXTZ\/5jZqAAGEhADFfly5d7Omnn27qR9D59Kc\/bd\/\/\/vfLEgMe8ASGTXK77bZrGmPs2LFuY41pI0eOdDLjJOCBXBCJp556ytq3b2+f+tSn3Abdr18\/O\/HEEx3Zgdxcfvnljijw\/5ba2rVrXQB99dVXHTHaaqut7G9\/+5v94x\/\/cHPRPC4QOvpACpYtW+Y+Y95hw4bFLMOeeOIJO+GEExxxIQigI9Zy\/fXXt5oIvfPOO3bEEUfYVVddZbvvvnuz+b3NgNF+++3n5qU\/m9BnP\/tZI8AhN\/jzWSGBeffdd6vCMwoIdSqLgCcn\/M1hBDunYc\/YD833+fznP+8INZsIOj733HMdufeNTRq90yA\/v\/3tb5390WJiix\/n1FNPdQenSy65JKg9Njn8CT96\/fXXP0RgTj\/9dGf7xB82RQ4O2PBdd90VHJsOK1eudD5LnIOU4eMcbsr5IjEA\/CBJxAvIE7j95je\/cQcxDiKQRnD9wx\/+4IjMpptuao888ojDLSsxphJsyq3dkxRsiD2AWMXPNtxwQ0caDznkEHeYznsTgalQw4VBBkeFEeO8OCzZFAyouA9TceL54x\/\/6LIRZApobFz0h5BAbtik586dazvuuGOzjRoiwCmcOQgQNE5y\/oT0zDPPuDH5m02dTRAy89JLLzmnZ3M+44wzrF27dk0EpjjbUwgHpx2yJ4VztAQXWZXevXu7jz3z33XXXe2yyy6zvffe2yBoN910k9uUwYCMB\/9uqfk1EtSZH1xoECafIfIExuMC6eE0B\/40giFzkE359a9\/\/aGA7eeGiN16661Nmwzy4\/zIP3PmTNetHJaFa\/A4eLJW+BkbyH333Wff+ta37JxzzrGf\/vSnDh\/sZsqUKU1dCURHH310MwLDJlgNnhWauR4rQMCTE3\/4OO+882zGjBnO53yGtLgPGcSbb77ZZWp+8IMfuNFWr17tDi+QbcgCB5\/Ro0c7kk+LiS30e++991xGkpM68QBighzPPvus83EOCxAbDj6FjdP5o48+2swfXn75ZTvggANso402chsiB5C99trLkRHWiG+H\/AiiQwaRtYERh4AvfvGLLhbNmzfPHW6KG8QdMkUGpn\/\/\/kYGmcMbWRtiFb6Pf\/u4SB9i7fTp0118rMYn2jLGVIJNubW\/9dZb9o1vfMPI6IIt2RgIHnF14sSJ7hCNDvPeRGAq1HBxkMEZICFsYKEMDA6NoXFyol199dV244032rHHHuv+T5q38NRSuFHj6GzGGC+E58knn2xKX1OaYPODlUOKDj\/8cHeSOumkk1xQgtiQfmVz9hkYAhblmW233dadIk855ZQmRGIIDOM8\/vjjbl5OpJw8cSDaD3\/4w6agzSZNiYYguMsuu9jw4cPLIr9ixQr7zGc+4051BEECF8HOkzoeLiYw\/IzgBmEiQwUxIViHAq\/fZChnQYCQG1kJuGwuISyZl5MhjdMidvDd7363KcMGweTEPmDAAKMsxobGZuGJCp8TrHwrRWCqxbNCM9djLRCYXr16OR\/E5iGhvhxbnIGBRBMTOCFjFzSyB5Qnu3Xr5jZsiFBhpiMmtjAOvkcGhkwJpOgLX\/iCy7AQRyA3kGVITHGmsxSBYSMk5pDR4Dma74d\/cPgJ+ZE\/CIDLiBEj3BgQNGTxh4lCg2ITJmNM41BHiQ0yRomYQw6+WNjwaWIA5IyMFZnfrMSY1mJT7HjFa99ss83srLPOcpkqGnaEvogrHFp9GT\/vDiwCU6GGi+vUDMOGR\/33uOOOc6OW6sPPCXJs8j5lzIZL4GFjI4sAwfj4xz\/uiAqt+A4MP+vatavbZAvvwOD0kBaCGoycUxBGDinhlMMpkHskEA6CH4EXMvGvf\/3LOQKnHIz\/qKOOcvMSyAiMBN7C+n0hZJAm5KCRvuQE5tPp\/IznIUg8\/8tf\/tKdCDnRUWLhxAAWnBqLT4k8S1Al1f7Pf\/6zaUpOhWRyGK8UgaEj+EPYPAlkrawfEvTRj370Qxrn5ApubDQ0SJDP+LA5QEbKYckaKRm21PyJnZMk2TX\/f8gMpIZUOFky31oiMNXiWaGp67EPECi83+JBoTSMz\/s7HqX6QFA5oPgMpc\/csNFjoxB1bAg75SARE1uYH2JBRnLSpEnuQERWDxtjU6dh08SVhx9+uOmwxM9LEZjbb7\/d+abPZtKP2MFhjMwhG2TIj5gfOQrLZcQn7raQgSguqSI7mVn8jQwQjbtA4AlR8SU2fs6BhjiGX3t5vA6yEGNai02h05VbO6VlbI9sC1k8yujgA4ZkzyhDxZbSs+joIjAVaq0wyEAcKDGw0WIwnLZoxScpjI3UKE5O4OOiLVmRY445xm3+\/BsCQ1qYzMO9997rNni\/UUN4CIKkf\/m88OSHsRJ8KD2xmX7ta19rYufFS+S0Q0aAk4xv\/oRAQCHYtqZBUNjoOVX+5z\/\/aUo5F46BvGQ4cKYFCxa4WjskjiAOQfIntuJ5weO5555zpOvHP\/6xu0\/gT4QtZWAgORAWn4GJWQvEgtQ1JIbME3IRFMi+EDj9SacUlmS5WA+N9RNACFiQQxobFCcmn4Fhw+HeVGszMLXAMwYL9SmNgCcnlGs4ES9evNhlUSgzcm+DVlhCYsOmTMgdD3+fCT\/g59ix39TJbpDJgfxz+IiJLcx18MEHu7IT2R98A6JdqhWXM8tlYJCfuEMrzsCE7MLHEA5gZHppXKonPlSTgcE38UcOPNzTaSl7m+YY01psPNaxa6dcx8GTGEbpjYMa+sM+OPCVe1kipNc0fy4CU6F2iskJJx3KJziRDxil7sBAbngzx58wvGGXEoOU7cUXX\/yhTAOnIk5HkB42VjZHgg7ZEzZ6Gs9RbsKACXS+kc6lnANTJ8vjSYyXg03WZ1S44U7wgWBAeIobJysu2tG4QMzFVEpprO\/II49s1p17KRAvymOQN54j6BKwwYxAX9gI8Jz4cDx\/uvUnQl8GKyYwyMA9g+I7MJTZ0A8ZGE64xQ2SRMbFZ11weDJEZMaQK4Rl4RsW5e7AcPeFzc6fIP0dmOK3UMplYLzsrcWzQjPXYwUIFJMTMhwQ3MJNtfgOjD+gkGVjk8F3ybqUahDnn\/\/85x86+JSKLf7+hs+u4KtDhgxxJRn+LvR3ykI+21tITArfQip1B2bPPfd0hzLum5BJCfkR9\/M4iPjY5u\/AQO4gaMQa5MRfwI7GfZk33nijicyBDZlXfzeP0iwEDfnIKhe\/vVmIY2t9oi1jTCXYtGbtxHl0RGz55Cc\/6TLXEBjuCGGfZNDy2ERgKtRqKXJC2o4UqE\/DFvZh0+ZCLGUUUoKwZLIRODBBglOZJwMQA1Kl1HjJ7HDBkzJLYXqXTA\/3M3y6lr+5W0N2gvb888+7t2EIHpzwyCZQsiBDQGoWEgBBwOhxZOryNH8BmX+H7sAQrMkIkSInkPPHZyMKiQLBlnssnDgZkyBHMEQOZCMbAXaFjYwShIPSEvdeSBOTuSHdDFljXk9guMfziU98wv761782lYEK7xCFavfMhRwEbC5WEkDBC3nBJ4RlodzlCAzjkK0DI8guhI47MxAZyBJycB8Ke0Af6BPyCdEko+NbJXhWaOZ6rAUCg9\/6gwR64uCArxXegYE04GPoC3uldOo3aC6iF15i928nkqkgU+u\/ooEXBGjFsYUyJJk8\/\/o0PoyPQXYoofImG\/7A58QSSAPPcMEXu8PWiDmc1PEPXl8mc8IFdjKH2CjkC0J09913OxlCfoTcHI6wX+5iUBbloOR90fuGv1vGmN6HKYmz2RIfwRH758UDDkJkXvgZn\/vGYcDfn+FnlfhEW8aYSrCJXTvxiv0B3VFaJ7ZAWjkccvgsvH+VN4cWgalQo6UIDE7EZsxmy6mFrEXhd8VwCoOUsClBIAgsnC4gLmzoPsuBsRMg2dwIOsxVTGD8iYtnCUic4nkFmiDmG8GT75bx9ysImFzw444Kxk4AhARBrPiMNK2\/\/xJDYNhUOVlxGQ85ICcw\/eJad\/F301De4ZVSCAmBnaxJ8XdNkJXhhMjaCMRkgpCRIOuzO4V3gyAckB1S1pBFf2EyJvCCM3oAJ+bB+T25jMEylsDQjxSv\/x4YgjbB3d+Z4pRJ8CluhWl9PqsEzwrNXI+VITCQaUqukAyfMSi8A8PnXLSnhEgWjw2Zf5MFJRNXuCH7cg0HEeJDMYEpji1cduWQQObUN+yHzCEkBZvmc4gxpWayiz4DWKxUnzHGj+nL3TtiGDEF4oSdxvgRfTjEMAa+DbHjEEWswz9LERj\/5qD\/HhhiCJkWT07AglJdcSN7W5hZrsQn2jLGVIJNzNpZAzGDspr\/Th9eCOCQSGYLO+KqQuF1gTw5dcMRGJycMgns1F9uwnHZUHGUzp07u02\/3KXMtBkAJQc2QQIXQUNNCAiB0gjkwf8h2dyT42TdKG+byJ6FQCkEGorAcCLicivpSE7znsBwyuCEAGvlgi0nezIoWWkQGC7m+u+RyIrcklMItCUCefF\/Sh+8NcTdhpbeDmxLXDWXEEgKgYYiMNy5INtCCpfmCQx3S7hcyhsF\/i0g6ts+dZqUcjSvEBACtUNA\/l87LDWSEEgDAg1DYKghU1\/mNrj\/RkwIjP8ODy64+m8u5IIsdcPi3zOUBoVJBiEgBFqPgPy\/9ZjpCSGQdgQahsBwQZVfkMjlMC5R+gwM9WQufhYSGO7IcCHWf\/FU2pUo+YSAECiPgPxfFiIE8odAwxAYbv\/zaiDN\/0ZZLr5y7yVUQuJ3nfCWkJoQyCoC\/vfTZFX+auWW\/1eLoJ7PMgJ59f+GITCFxleYgeHnvIrIK8z+Ei+vF\/OdDb7xHSP++xhKGTGv+xZ+eVSWDb0R18ea867DkA3nzWbLrUf+n7y28+5v9UC4Gszy6v8iMGbuYi8ExL9GTYDji51iCUw9jFVjCoFaIpDXAFYJRsUERv5fCYp6JksI5NX\/G5LAtNbwQsrvd9CR9o8\/\/6HFYfOavmstjuqfHAIhG05OsvTPLOzSryNJWB6BvNqwCEyE5YeUz+dHXH1\/iyPNHD6gbAkqQgR1EQJVIRCy4aoGz\/nDIezK3ZHT4SXnxpGR5YVsOCPL+JCYIjARmgspXwQmAkR1SRSBkA0nKlzKJw9hV87\/dXhJuXIbRLyQDWcVBhGYCM2FlC8CEwGiuiSKQMiGExUu5ZOHsBOBSbkCJZ77ZbflXkTJKkQiMBGaCylfBCYCRHVJFIGQDScqXMonD2EnApNyBUo8EZhGtoFqAhi4KY3cyNaTjrWHbDgdUqZTihB2IjDp1Juk+h8CIRvOKlbKwERoLqR8ZWAiQFSXRBEI2XCiwqV88hB2IjApV6DEUwamkW2gmgCmDEwjW0561h6y4fRImj5JQtiJwKRPZ5KoOQIhG84qXsrARGgupHxlYCJAVJdEEQjZcKLCpXzyEHYiMClXoMRTBqaRbaCaAKYMTCNbTnrWHrLh9EiaPklC2InApE9nkkgZGNnABwhUE8BEYGRGaUAgZMNpkDGtMoSwE4FJq+Ykl0cgZMNZRUolpAjNhZSvElIEiOqSKAIhG05UuJRPHsJOBCblCpR4KiE1sg1UE8CUgWlky0nP2kM2nB5J0ydJCDsRmPTpTBKphCQbUAlJNpATBEKbcE6WWZdlhLATgakL7Bq0hgiEbLiGU7XpUCohRcAdUr5KSBEgqkuiCIRsOFHhUj55CDsRmJQrUOKphNTINlBNAFMJqZEtJz1rD9lweiRNnyQh7ERg0qczSaQSkmxAJSTZQE4QCG3COVlmXZYRwk4Epi6wa9AaIhCy4RpO1aZDqYQUAXdI+SohRYCoLokiELLhRIVL+eQh7ERgUq5AiacSUiPbQDUBTCWkRrac9Kw9ZMPpkTR9koSwE4FJn84kkUpIsgGVkGQDOUEgtAnnZJl1WUYIOxGYusCuQWuIQMiGazhVmw6lElIE3CHlq4QUAaK6JIpAyIYTFS7lk4ewE4FJuQIlnkpIjWwD1QQwlZAa2XLSs\/aQDadH0vRJEsJOBCZ9OpNEKiHJBlRCkg3kBIHQJpyTZdZlGSHsRGDqArsGrSECIRuu4VRtOpRKSBFwh5SvElIEiOqSKAIhG05UuJRPHsJOBCblCpR4KiFl3QbuvPNOmzRpki1fvty6dOliI0eOtP79+7tlvfXWWzZ06FBbvHixde7c2caPH2\/du3dvWnI1AUwlpKxbTj7kD9lwPlbZ8iqS8v+ZwwfYkiVL8g6v1pdyBPLq\/w2TgXnooYds1113tS222MIeffRRR1iefvppa9eunY0aNcrat29vI0aMsNmzZ9vkyZNt+vTpIjApd0qJF49AXgNYLAJJ+b8ITKyG1K+eCOTV\/xuGwBQax3vvvWe9evWyZ5991jp27Gj9+vWzadOmWbdu3Wzt2rXWt29fmzNnjnXt2tU9FlK+Skj1dD2NXQsEQjZcizmyMkZb+r8ITFasIt9y5tX\/G5LA3H777TZr1iwjrbx69WpXLlq4cKHLwtAGDhxoY8aMsT59+ojA5NuvG2Z1eQ1glSiwLf1fBKYSDemZWiOQV\/9vOALzxBNP2MUXX2y33XabbbvttrZq1Srr0aNHMwIzYMAAGzt2rPXu3VsEptaepPESQSCvAay1YLa1\/4vAtFZD6l8PBPLq\/w1FYLjzMmzYMJsyZYorC\/kWU0IaMmSI8adUUwmpHi6nMWuFwIQJE4w\/jX6ZNAn\/F4GplRVrnEoRyLP\/NwyBWbBggZ199tk2ceJE69mzZzNb4I2kDh06NF3i5W2lGTNmNPUJsVcRmEpdS8+1FQIhG24rOZKaJyn\/F4FJSuOatxCBvPp\/wxCYQYMG2bx586xTp05NeuUODBd3eY2a7Ip\/jXrcuHHNSE5I+SIwChZpRyBkw2mXv1r5kvJ\/EZhqNafna4FAXv2\/YQhMNUYQUr4ITDXo6tm2QCBkw20hQ1bnCGGnL7LLqmYbR+6QDWcVCRGYCM2FlC8CEwGiuiSKQMiGExUu5ZOHsBOBSbkCJV7wq0CyCpEITITmqglgDK80cgTI6lJXBEI2XNfJMz54CDsRmIwruAHED9lwViEQgYnQXEj5ysBEgKguiSIQsuFEhUv55CHsRGBSrkCJpwxMI9tANQFMGZhGtpz0rD1kw+mRNH2ShLATgUmfziRRcwRCNpxVvJSBidBcSPnKwESAqC6JIhCy4USFS\/nkIexEYFKuQImnDEwj20A1AUwZmEa2nPSsPWTD6ZE0fZKEsBOBSZ\/OJJEyMLKBDxCoJoCJwMiM0oBAyIbTIGNaZQhhJwKTVs1JLo9AyIazipRKSBGaCylfJaQIENUlUQRCNpyocCmfPISdCEzKFSjxVEJqZBuoJoApA9PIlpOetYdsOD2Spk+SEHYiMOnTmSRSCUk2oBKSbCAnCIQ24Zwssy7LCGEnAlMX2DVoDREI2XANp2rToVRCioA7pHyVkCJAVJdEEQjZcKLCpXzyEHYiMClXoMRTCamRbaCaAKYSUiNbTnrWHrLh9EiaPklC2InApE9nkkglJNmASkiygZwgENqEc7LMuiwjhJ0ITF1g16A1RCBkwzWcqk2HUgkpAu6Q8lVCigBRXRJFIGTDiQqX8slD2InApFyBEk8lpEa2gWoCmEpIjWw56Vl7yIbTI2n6JAlhJwKTPp1JIpWQZAMqIckGcoJAaBPOyTLrsowQdiIwdYFdg9YQgZAN13CqNh1KJaQIuEPKVwkpAkR1SRSBkA0nKlzKJw9hJwKTcgVKPJWQGtkGqglgKiE1suWkZ+0hG06PpOmTJISdCEz6dCaJVEKSDaiEJBvICQKhTTgny6zLMkLYicDUBXYNWkMEQjZcw6nadCiVkCLgDilfJaQIENUlUQRCNpyocCmfPISdCEzKFSjxVEJqZBuoJoCphNTIlpOetYdsOD2Spk+SEHYiMOnTmSRSCUk2oBKSbCAnCIQ24Zwssy7LCGEXIjDlhNpjjz1s6tSpdZFbgwoBj0DIhrOKlEpIEZoLKV8lpAgQ1SVRBEI2nKhwKZ88hF2IwBxx9f0trnDm8AG2ZMmSlCMg8bKOQMiGs7o+ERgze+utt2zo0KG2ePFi69y5s40fP966d+\/epNOQ8kVgsmr+jSN3yIYbB4kPr7Se\/g9BEYFpZOtKx9rz6v8iMGY2atQoa9++vY0YMcJmz55tkydPtunTp7cpgTn++OPtySefbNHalWpORyDIqhR5DWC10Ec9\/V8EphYa0hjVIpBX\/xeBMbN+\/frZtGnTrFu3brZ27Vrr27evzZkzx7p27ersJqT8WmRgajFGtUau5\/OLQMiG87vy8Mrq6f8iMGH81aP+COTV\/xuewKxevdqVixYuXOiyMLSBAwfamDFjrE+fPqkiMCEzr0WWplEzQRMmTLAhQ4aEIE7s82r1ktcAVq1C6u3\/MQSm3Bpq4dPVYlSP59Pub\/VYc7VjlosBITvJq\/83PIFZtWqV9ejRoxmBGTBggI0dO9Z69+7tbC60eVRrmHpeCNQbgVCAq\/f8aR1f\/p9WzUiuWiKQV\/9veAKDkYRSyLU0JI0lBIRAuhCQ\/6dLH5JGCMQiIAJjZiNHjrQOHTo0XeKdNGmSzZgxIxZD9RMCQiDDCMj\/M6w8id7QCIjAfPAaNfcf\/GvU48aNs549eza0YWjxQqBREOA1avl\/o2hb68wTAiIwVWiTLM0111xj77\/\/vh1xxBF2wQUXVDFaMo+++eabLvP03HPP2brrrmv77befXXbZZU0XmltaY+i7M5JZTXjWiy66yO666y5btGiRrbfeeu6BvK0xjIJ61AKBPPh\/LXAoNQYx8fLLL3dvcxJXLrzwQjvkkEM+1PXVV1+1fffd17p06eI+IxP+yCOP1EuszI27fPlyO+uss1x85iLuvffem7k11FNgEZgK0WXjxyHvu+8+53xHHXWUc9J99tmnwhGTeYx1PP\/88y6IrFy50k499VQ76KCD7OSTT7Zyawx9d0Yyqyk\/62OPPeYCAH88gcnbGtOIex5lyov\/10s3EBdK8fyahNdee82OPvpoe+ihh2zjjTduNiUE5qSTTrIHH3ywXqJkelxi8vz58+2dd96xG264QQSmSJsiMBWaN445b948l4Gh8eV3bIpXXXVVhSOm4zHKZzgNWZlya8zaxcd3333XvU120003Wf\/+\/ZsITJ7WmA4Lagwp8ur\/tdLeueeea3vttZcdd9xxbsjTTjvNfT3FkUceKQJTAch8yenVV18tAiMCU4H1lHiEjZ406Xnnnec+5cRxxx132C233FKbCRIYZcWKFXbooYe6V8h57a6lNXKyCn13TgLil51y9OjR7rV4giiy+wxMntaYNszzLE8e\/b+W+jr22GPtnHPOacpIk7Hdcsst7cwzz\/wQgdl\/\/\/1tq622sg033NBlY0444YRaipKLsURgSqtRGZgKzZsARhs2bJj7+\/7773d3K6ZMmVLhiMk+xvdhnHHGGbbrrru63wtFa2mNEydODH53TrKraT47Kdjrr7\/epbT9F5cVEphSeszaGtOEdyPIkjf\/r7XOjjnmGHcxeu+993ZD86bX1ltv7WJMYSPbu2zZMvfZyy+\/bIMGDbIrr7wyc6X4WuNXPJ4IjAhMTW0sTynkNWvWGClfTkGXXnppE055Ka9ARviz\/vrru7VRd99mm23cr494+OGHWywFZq1MVlMD12BlEciT\/9dD1bElpOK5+Qb0Tp06ueyN2v8QEIERgampP\/gTlPRcAAAgAElEQVRLfDNnzrTNNtvMXVIbPnx45k4O\/O4nskgbbLCBO\/mss846TTiVW2NWvzujOAOTxzXW1NA1WEkE8uL\/9VIvGWnuBfpLvLzkwCVeyMmCBQvcZV7eqlm6dKltsskm1rFjR3v99ddd+Yg3BQ888MB6iZbJcUVgRGBqbrj33HOPXXvtte4XQB5++OHuLaSstWeeecZI926++ebWrl07J\/7BBx9s3BmhtbTGrH53RjGByeMas2aDWZU3D\/5fL+y5H0gMmTt3rosrkBL\/GjX3BnfYYQd3H4a7g1dccYVRwuYVai7aF5eZ6iVjVsblrVDKbLyJtOmmm9rpp59ugwcPzor4dZVTd2DqCq8GFwJCQAgIASEgBOqBgAhMPVDVmEJACAgBISAEhEBdERCBqSu8GlwICAEhIASEgBCoBwIiMPVAVWMKASEgBISAEBACdUVABKau8GpwISAEhIAQEAJCoB4IiMDUA1WNKQSEgBAQAkJACNQVARGYusKrwYWAEBACQkAICIF6ICACUw9UNaYQEAJCQAgIASFQVwREYOoKrwYXAkJACAgBISAE6oGACEw9UNWYQkAICAEhIASEQF0REIGpK7waXAgIASEgBISAEKgHAiIw9UBVYwoBISAEhIAQEAJ1RUAEpq7wanAhIASEgBAQAkKgHgiIwNQDVY0pBISAEBACQkAI1BUBEZi6wqvBhYAQEAJCQAgIgXogIAJTD1Q1phAQAkJACAgBIVBXBBqWwEyePNmuuOKKD4F70UUX2amnnmqnnXaaPfDAA02fb7bZZtanTx8bMWKEbb\/99s2eO\/744+3JJ590P5s+fbrr51vhOO+\/\/75tscUW1q9fPxs5cqT7t28vvfSSHXzwwfbUU081+3kp7Y8bN85uuOGGZh9tvvnm7tnYxvqnTZtmixYtco9MmDDBDjvssNjHo\/u98MILNmrUKJs\/f7516tTJvvSlL9kFF1xg6623nhvjvPPOc9i9+uqr7v+\/+93vmtbPM8OHD7e\/\/e1v9pnPfMbGjx\/f9NnJJ59sPXr0cPpoqYH3j370I7vzzjvtjTfesI033th22GEH++Y3v2l77723\/elPf7JDDz3UPb7uuuvaRz7yEafbL37xi\/b1r3\/d1l9\/\/eh1vvnmm3bVVVfZo48+av\/+979tjz32sMsvv9y222676DFiOobwLKfXf\/zjH\/atb33L5s2b5+T67ne\/22Sr4DR37ly79957bZ111okRpeH6hGJG8efY2yc+8QkbOnSo7bvvvjWPGdg3seTSSy8N+u5rr71mxDZ8CvvEzh988MFmMt1\/\/\/1GbHnllVdsm222sbPPPtu+\/OUvR+sZeYgjd9xxh7399tvWs2dPJ1thPCweLGTPs2fPdrFuyZIlRozDLwcPHuyGqXd8YI7ddtvN4UXbaKONbMstt7R99tnHzjrrLPfv2NZabP785z\/b1VdfbX\/4wx\/sX\/\/6l1s7sRNbIlZVu\/ZYudPer+EJTMeOHd1G6NugQYNcMPDEY5dddrFevXq5jYlNloDBhugbGxebFQZK+9rXvuac1jc\/Trdu3eyjH\/2oPfvss7ZixQo75JBD7LrrrmvqN2nSJJsxY4bhsKHmCQzOBSmgbbLJJvaDH\/wg9GjT59\/+9rfdeiAHr7\/+elUEhjXuvvvujvgVtpUrV9rnPvc5AyOcniC0dOlSFxiHDRvmun7+8593Qf6hhx5yGBYSmKOPPto23HBDF1S\/8IUv2Fe+8hVHaCCWBGMCsF9\/qYXfddddrt8GG2xgffv2tXfeeccWLlxorB1ZCwnMpz\/9aSPIeyLVv39\/u\/XWW5uIVgjY4447zp5++mlHQrfaaiv3bPfu3Y1NobWEoBo8y+n1+9\/\/vt122202Z84cRyIJzBAW9I\/ct9xyS9nNJoRB3j\/3BKWlmOE\/Z7M56KCDnH0tWLDAOnTo4PwegkyrVcx4\/vnn7YgjjnCEdNNNNy0LP0QBv4OYPPHEEx8iMN4XIO377bef64O\/YC+f\/exno1T7k5\/8xJF2Dmaf+tSnnH9C4n7zm9+4+FTcQvEBGU444QS3eeP7v\/rVr9yB6\/rrr7eBAwdaveMD8noCgy+vWbPG\/vKXv7i\/WSPxetttt60LNr\/85S\/tnHPOMeISxMmTzfPPP9\/OPPPMqtceJXQGOjU8gSkmJMXE49xzz3Wsl02TjaU40+GddqeddrIXX3zRunTp4jbhdu3auaE8gfHj3HPPPW7zYNMuzPBAnHB6MhIEjmuuucYw4uXLlzsnghTtuOOObkxPYIqzPV72iRMn2tixY+2rX\/2qjRkzpqwZksmAnBVnYCA2ZKgIvKyFE+Qll1xSkjAQTPgcclHYPIGA4E2dOtUFH7IbbAAE3cIMB\/i99957zQgMwZkAATGDCA0YMMBhx2Y7ZMgQO+qoo8quDSwJMgRVAiEN8siJhnELCQzkivbII4\/YN77xDRekOAEdc8wxbhPi9FPq1Mozy5YtcxkiTkZsFGSXIMF\/\/OMf7eabb7YDDjggqNPChdQCz1J6vfLKKx1hYWOA6LBmCDNZGWT+3ve+l4GQlZyInqC0FDOKP8eP8WkaG5DP3NYqZrCR\/\/rXv3ZZX8g\/pJk\/HBI4MKHjAw88sBlgnNzZ+Ittmb733XefswU2zp\/+9Kd22WWXOb+bMmVK0AeYBKIDGSYDwwGATOcvfvEL57NnnHHGhxQXig\/ELtZTHIN33XVXmzlzpiNv9YwPhQSG+EUce\/nll41YDcbEBGJxKD5Ugg1ZMOKuJ0hksTlgcBDk72rXnpwX1XbmhicwsNtPfvKTTagS5El9FmdgHnvsMWe0J510kiuJ+IYRY8AQDkjAX\/\/612anlkICg0Nj8DfeeKPbjH0Z6N1333UnX5yVTAbpSU7Je+21l5EBIoBwkiFYsfl7AsPPVq1a5TJIBCCMm1YtgWGTJ+NBNuLYY491xILgBkkh+NI4RXKCopF1ImBxMqCRFeEPZTLWBCHwpR5PVAoDOs+UIjCQCdYFPjgyOLAB8yzEJJTZuPbaax354dQJoeA0s+eee7oTDa0UgeHnBHECJETpxz\/+cTBAsVERVJGHzWTrrbd2pSmIjT8xhXRaazxLERjsl\/T73\/\/+d5cVAB\/s6ZRTTnFkurCkWdswk4\/RPEFpKWa0lIHBtmfNmuUILq0WMYNx8E0IBnGFTY24BDHB1u+++27nv\/hJYQmnJQJDPCI76Qm374dNcCALbdJvvfWW8y8axJ1sE2VJSDHyEBuLWyg+QISQBxLG8z\/84Q9dzOTgw2Gx3vGhFIHhZ2TgiWfEuN\/\/\/vd1waYYqwsvvNCV\/E888UQbPXp01WvPh0eaNTyBKVYkpwJIRPEdGPoRgCA4nMppsGQ2dU6vZBRwMjZ4yglkQGilxuG0jiP6DYPNg5LKM888YwQCyAClE1KmbDSchH7+85+7MRmbuyAQKk5ZBB02YpyacgUBjEwHtVP+7YNKSwZbaqPjVM4pjJMmQYN2+OGHu4D48MMP28c+9jGHAfKWav7ExBiM5f9PX4Ip9XGPs3++FIHhM06WlDoIFpR4IBWktbmvwR8wJBBCOosb2SsIBDj6xoZNZoWA3RKB8QQRPRE00AmkiWfJIJVqBBUIlm\/IDaGBMHD6DOm01ni2lFlDPnCB\/CIjemVDpZ7PhkOj1ECJU605Ai3dgfG23NLnEA3iBifqWsUMfIKyKBldMrRs8mTU2PB79+7t4gVx48gjj3SHK99aIjD4OnekfKaBuIKPEPO4nxfyAe5sUDbDpshS0DypIjODzxa3UHygFIt9Yq8+FvhDC8SBmFDP+MCcvoTkceFnZDAhEjSwQb5y8aESbAqxIhNPDMFHIcJ+36hm7Xnx7YYnMLElJE4gvmRByYVTPZs79wrIlJBp4DIqF3rZHLgPAanwBIYNunPnzq4PdzI4XeAcNDZgggekBsdsqTRy+umnuzLN2rVrm0pU\/JvTPicSSjz+glusgZba6Mg6cMGzVIOgQdo4lUFEaGze3BPycnNRlj\/+hAUGnCBoZIvIGsVkYEoFPE6\/1OjJ9oAhd4dIW+PYLTUyIeAOGaEeTyDg\/y0RGMpTjOczMLFYYhfYCQGGC9Vki8ggcWE4pNNa41mOwPj13H777Y5wUy7Yf\/\/9XeYJe4KI\/\/a3vzUurqv9D4HWlpDIqnHg4N6EL9HWKmZwMICgYGds6v4AUKwvYgx2GCIwPgODP2ELxRmYkB1Uk4EpFx+Ii5ShIAk777yzy+a2b9\/elWp9md7LBiGqZXxoicAUZ2DqgY0fE3JMtoesLntM8Qsk1a49JHvaPxeBKbqU6xVWfHeFTZdg8N\/\/\/rcpe+CdvpSSb7rpJncqKh7H1zILAwtpYE69BDuCHqd1TvsQmsIyCRsjBICTFndoaLBwTssQGAIa9VlOBc8995zrw2msXCu10bF5s4mTveFv3yglUdPnHlBha+nOhnd0fwLzd2AgeAResku+tZSB8Z+zwYMlZTQcmY0Xske5DBLJibG4cVL6+Mc\/3lRH9qdKCCTkpRSBYXzmKbwDQ3Dm55z4iu8U+DlXr17ddOGXYMvl5H\/+858ulU\/GKqTTWuMZIjCQT+7msLFCtLkkyabIujn1Incoe5f24FZr+VpLYJgffyRbCpGl1FOrmMG9EmzOZ1ewNzIf3FvD3nxDtxzSQgTGl029nP4OjL9zEeMD3BHhbT+fkSKmkRX2ZVRiErGJww6XYkPxAaJC\/PMxkJjKm34cCJCvsNUjPpQiMKXuwNQDG+bmJQ+y7VxxILvLoblUq2TttfaNpMYTgQkQGO6gsGn7NwrY\/B5\/\/HFHNHw5oXBTg1zwh6wI9y+KCQwODmGBDJCWJE1K8GGz7dq1q7MDMi2UPXBUyllshGQOyHTwM05InDQIAqQnCQyUnAgWvOkUcweGubmgS9aAtTAPz\/KaIn+zNkpGkCoch7s9ZE3ILPlXoL3RtkRguLvCWpGfzZLgRQq98C0kLtiymVKrpzEWGFMuI4DRfJYJWdiYf\/azn7mL1Wy4nGghJqRZi9vFF1\/ssjScWlgDpzayMeDHSbOQwEAo0Q1lKhrBmCDJWkP1f\/qTbSIThA4hO9wzQa\/oIkanMQQmBs9yei0ss0F2kZdsG3pmo8K+IDDoBBtvzWuiSQWwtpw3lsD4t5DwK\/yYDZhyCr5ei5iBbUKIsW\/IJs1fDObQwp0T7rGRRaEv5WlkoXSKL3J3hAMSGUYIPpkL3mjiOXwPu\/VfB4APEHNifMDjgw9wJwyf5LDCfLwl5cusntCE7BmZIdbcW8NviW\/EBAhS4b2eesWHQgIDrhwWyab5r8Mgs0VcqQc2vJVJtonGHuTf4kJfhS9mVLr2tvSbes4lAhMgMB58HJ63gAgGZBT8PQk2ZurOvvnUK4GAOyJkMLjjUngPxG+sbBqUY6hjkyb1jRM8FywJAKRQSeVzH4PyEZdZ2RS5VMubQqRRCRbI5Z06hsD4E1excfkSEScNTjuQHOrtzEsgY+MrvjzbEoFhbEgDz+DkYMjtecpJnpz4U1uxHDznMzTUz\/kDYaEmzybLGFx0ZpNFTghYcYMU8hz3gcCRYMoaSMmSzSr1PTAEKjYZLrb6t6RiAhSBHjLAPARrNhZOs\/7V2ZBOYwhMDJ4hvTIGhI83UcDPf08N8vvX+iGH\/q2tegafrI0dS2D8urBxDgNkYfhTq5iB7ZN1Jb7416fZyMhMYu\/EBWydkguXx\/3bMxCT4laYCSYG+e+BgYT4rDDPxPiALz\/674Fh\/u985ztNmbxiAhOyZ+KOzyiTAecgSZxjPYWtXvGhkMDwbw6J4MKVAbJp\/i5KPbDx9xCL9UWmunCvqHTtWfO9luRtOALDxkwal+8B8d9FQgqQoL148WJ3T4W0HdmNtmhkFHD04leQ22JuzSEEGgUByhVk3SCSfNUBGTOyGLQk\/b8S\/LlszeGm8G5LJePoGSGQdQQaisCQ+uOVX04nlBU8geFeCqclTuYwX05avA7bFo1gRAnKf8dLW8ypOYRAoyFASp5MJadmyiMcWCiHksFM0v8r0QN31MhmUgpVEwKNjEBDERjSbZy2uH9C8wSGS268ocJryaRBeT2R9Lq\/k9LIBqK1C4G8IYD\/c5GU8ihEQP6fNw1rPY2CQMMQGL7Ei3sopJL9V+5DYLjJT7mIewH+XgZ3OrgoVe53eDSKgWidQiBvCPD6OFkMYoH8P2\/a1XoaCYGGITDc6Oa7Q3g1lItqPgPjv8m2kMBwR4a3YEKvIDeSoWitQiAPCHCxm0v0ZGO5mC7\/z4NWtYZGRaBhCAxv8fBmEM3\/dlFey+XeSyiFXPjbphvVULTubCPgfx9VtldRnfTceSHryndq+O9RYkT5f3W46un0I5BX\/28YAlNoYoUZGH7OGwm8susv8frfDO2fIdj5X\/ZXylT5MrDCL3xLvzm3TsK8rw808r7GkA23ziKy15tXXXktmK8YKP61E\/L\/+ugz7z5VKWpJ4JJX\/xeB+eA1SgiIf40aglMY5PKq\/EodUM9lD4FGt2G+T4TfV8a3KfvGHRgu7nOxX\/6fPZuWxPEI5NX\/G5LAxKv9\/3rmVfmtxUH9s4uAbLhy3Qm7yrHTk+lAIK82LAITYV95VX7E0tUlJwjIhitXpLCrHDs9mQ4E8mrDIjAR9pVX5UcsXV1ygoBsuHJFCrvKsdOT6UAgrzYsAhNhX3lVfsTS1SUnCMiGK1eksKscOz2ZDgTyasMiMBH2lVflRyxdXXKCgGy4ckUKu8qx05PpQCCvNiwCE2FfeVV+xNLVJScIyIYrV6Swqxw7PZkOBPJqwyIwEfYVUn7oi+7y+iVCEdCpS0oQCNlwSsRMpRjCLpVqkVCtQCCvNiwCE2EEIeXz+RFX39\/iSDOHDyj7RXgRIqiLEKgKgZANVzV4zh8WdjlXcAMsL682LAITYbwh5YvARICoLokiELLhRIVL+eTCLuUKknhBBPJqwyIwQdWHv8hOBCYCRHVJFIG8BrC2ALUa7MqVl1VabgvtaQ4QqMaG04ygCEyEdkLKF4GJAFFdEkUgZMOJCpfyyavBrlxsUGk55YrPkXjV2HCaYRCBidBOSPkiMBEgqkuiCIRsOFHhUj55NdiJwKRcuQ0iXjU2nGaIRGAitBNSvghMBIjqkigCIRtOVLiUT14NdiIwKVdug4hXjQ2nGSIRmAjthJQvAhMBorokikDIhhMVLuWTV4OdCEzKldsg4lVjw2mGSAQmQjsh5YvARICoLokiELLhRIVL+eTVYCcCk3LlNoh41dhwmiESgYnQTkj5IjARIKpLogiEbDhR4VI+eTXYicCkXLkNIl41NpxmiERgIrQTUr4ITASI6pIoAiEbTlS4lE9eDXYiMClXboOIV40NpxkiEZgI7YSULwITAaK6JIpAyIYTFS7lk1eDnQhMypXbIOJVY8NphkgEJkI7IeWLwESAqC6JIhCy4USFS\/nk1WAnApNy5TaIeNXYcJohEoGJ0E5I+SIwESCqS6IIhGw4UeFSPnk12InApFy5DSJeNTacZohEYCK0E1K+CEwEiOqSKAIhG05UuJRPXg12IjApV26DiFeNDacZIhGYCO2ElC8CEwGiuiSKQMiGExUu5ZNXg50ITMqV2yDiVWPDaYZIBCZCOyHli8BEgKguiSIQsuFEhUv55NVgJwKTcuU2iHjV2HCaIWoYAnPnnXfapEmTbPny5dalSxcbOXKk9e\/f3+nmrbfesqFDh9rixYutc+fONn78eOvevXuT3kLKF4FJs4lLNhAI2XDeUZo\/f76NHj3aXnjhBRs8eLANHz68acnV+n857ERg8m5Z2VhfXv2\/YQjMQw89ZLvuuqttscUW9uijjzrC8vTTT1u7du1s1KhR1r59exsxYoTNnj3bJk+ebNOnTxeByYZvSsoIBPIawCKW7rosXbrUli1bZnPnzrU1a9Y0IzDV+r8ITKwW1C8pBPLq\/w1DYAoN57333rNevXrZs88+ax07drR+\/frZtGnTrFu3brZ27Vrr27evzZkzx7p27eoeCylfGZik3FLzxiIQsuHYcbLe79prr7WVK1c2IzDV+r8ITNatIv\/y59X\/G5LA3H777TZr1iyjrLR69WpXLlq4cKHLwtAGDhxoY8aMsT59+ojA5N+3G2KFeQ1grVVeMYGphf+LwLRWC+rf1gjk1f8bjsA88cQTdvHFF9ttt91m2267ra1atcp69OjRjMAMGDDAxo4da7179xaBaWtP03x1QSCvAay1YBUTmFr4vwhMa7Wg\/m2NQF79v6EIDHdehg0bZlOmTHFlId9iUshDhgwx\/pRqKiG1tTtqvtYgMGHCBOPPkiVLWvNYLvtWWkIq5\/8iMLk0ldwsKs\/+3zAEZsGCBXb22WfbxIkTrWfPns2MkzeSOnTo0HSJl7eVZsyY0dQnxF5FYHLj67ldSMiGc7vwooWVIjDV+r8ITKNYT3bXmVf\/bxgCM2jQIJs3b5516tSpyQq5A8PFXV6j5ITlX6MeN25cM5ITUr4ITHYdu1EkD9lw3nFYtGiREQNWrFjhlrrRRhvZjTfeaLvttlvV\/i8Ck3fryf768ur\/DUNgqjHBkPJFYKpBV8+2BQIhG24LGbI6RzXYhb4HpiVM9thjD5s6dWpWIZPcKUOgGhtO2VKaiSMCE6GdkPJFYCJAVJdEEQjZcKLCpXzyarALEZgjrr6\/5OpnDh+gO0spt4ssiVeNDad5nSIwEdoJKV8EJgJEdUkUgZANJypcyievBjsRmJQrt0HEq8aG0wyRCEyEdkLKF4GJAFFdEkUgZMOJCpfyyavBTgQm5cptEPGqseE0QyQCE6GdkPJFYCJAVJdEEQjZcKLCpXzyarATgUm5chtEvGpsOM0QicBEaCekfBGYCBDVJVEEQjacqHApn7wa7ERgUq7cBhGvGhtOM0QiMBHaCSlfBCYCRHVJFIGQDScqXMonD2F3\/PHH25NPPtniKspd1NUl3pQrPyfihWw4q8sUgYnQXEj5IjARIKpLogiEbDhR4VI+eQi7arIsIjApV35OxAvZcFaXKQITobmQ8kVgIkBUl0QRCNlwosKlfPIQdiIwKVegxHO\/OiePv0pEBCbCuEPKF4GJAFFdEkUgZMOJCpfyyUPYicCkXIESTwSmkW2gmgAGbvpSqka2nnSsPWTD6ZAynVKEsBOBSafeJNX\/EAjZcFaxUgYmQnMh5SsDEwGiuiSKQMiGExUu5ZOHsBOBSbkCJZ4yMI1sA9UEMGVgGtly0rP2kA2nR9L0SRLCTgQmfTqTRM0RCNlwVvFSBiZCcyHlKwMTAaK6JIpAyIYTFS7lk4ewE4FJuQIlnjIwjWwD1QQwZWAa2XLSs\/aQDadH0vRJEsJOBCZ9OpNEysDIBj5AoJoAJgIjM0oDAiEbToOMaZUhhJ0ITFo1J7k8AiEbzipSKiFFaC6kfJWQIkBUl0QRCNlwosKlfPIQdiIwKVegxFMJqZFtoJoApgxMI1tOetYesuH0SJo+SULYicCkT2eSSCUk2YBKSLKBnCAQ2oRzssy6LCOEnQhMXWDXoDVEIGTDNZyqTYdSCSkC7pDyVUKKAFFdEkUgZMOJCpfyyUPY1YvAVALLHnvsYVOnTq3kUT2TYwRCNpzVpYvARGgupHwRmAgQ1SVRBEI2nKhwKZ88hF29CIx+i3XKDSND4oVsOENLaSaqCEyE5kLKF4GJAFFdEkUgZMOJCpfyyUPYicCkXIEST5d4G9kGqglg4MbvQgo1pX5DCOnzahAI2XA1Y+f92RB2eSAwxx9\/vD355JMlVanYlH0LD9lwVleoDEyE5kLKj8nAtJQO9tPrFz5GKEJdKkYgZMMVD9wAD4awywOBCa1hyZIlDaDp\/C4xZMNZXbkIjJm99dZbNnToUFu8eLF17tzZxo8fb927d2\/SaUj5IjBZNf\/GkTtkw42DxIdXWk\/\/52BS6V2WSp+rhGyIwOTbA\/Lq\/yIwZjZq1Chr3769jRgxwmbPnm2TJ0+26dOntzmBKedCSuPmO8DUe3V5DWC1wK2e\/p93AlNp6anS52qh76yOUQ1mefV\/ERgz69evn02bNs26detma9eutb59+9qcOXOsa9euztZDyq9VBqZcmUklpqyGnXTIHbLhdEiZjBT19P+8E5hKMzeVPpeMhaRj1mowy6v\/NzyBWb16tSsXLVy40GVhaAMHDrQxY8ZYnz59MkVgyjF0FhKTxanFGOlw99ZJMWHCBBsyZEjrHmrD3tXqJa8BrFoV1Nv\/RWBK352pZjOuVudJP19prKkGs7z6f8MTmFWrVlmPHj2aEZgBAwbY2LFjrXfv3s7WQ5tH0g6h+YVACIEY8hoaI4+fy\/\/zqFWtqRiBvPp\/wxMYFB1KIcsdhIAQyC8C8v\/86lYryzcCIjBmNnLkSOvQoUPTJd5JkybZjBkz8q15rU4ICAGHgPxfhiAEsomACMwHr1Fz\/8G\/Rj1u3Djr2bNnNjUqqYWAEGgVArxGLf9vFWTqLARSgYAITBVqIEtzzTXX2Pvvv29HHHGEXXDBBVWMlsyjb775pss8Pffcc7buuuvafvvtZ5dddlnTheaW1hj67oxkVhOe9aKLLrK77rrLFi1aZOutt557IG9rDKOgHrVAIA\/+Xw0OxL3LL7\/cvbFJ7LjwwgvtkEMO+dCQr776qu27777WpUsX9xnZ7kceeaSaqTP57PLly+2ss85ysZZLtffee28m15EmoUVgKtQGGz\/Oet999znHPOqoo5wD77PPPhWOmMxjrOP55593AWblypV26qmn2kEHHWQnn3yylVtj6LszkllN+Vkfe+wxFzT44wlM3taYRtzzKFNe\/L8a3UBcKLfz269fe+01O\/roo+2hhx6yjTfeuNmwEJiTTjrJHnzwwWqmy\/yzxNf58+fbO++8YzfccIMITA00KgJTIYg47bx581wGhsaX37EpXnXVVRWOmI7HKJ\/haGRlyq0xaxcf3333Xfc22U033WT9+\/dvIjB5WmM6LBYOzdcAACAASURBVKgxpMir\/7dGe+eee67ttddedtxxx7nHTjvtNPcVFEceeaQITBkg+Z1TV199tQhMa4ythb4iMBWCyEZPCvW8885zI3AaueOOO+yWW26pcMTkH1uxYoUdeuih7hVyXrtraY2cukLfnZP8appLMHr0aPdaPAEW2X0GJk9rTBvmeZYnj\/7fWn0de+yxds455zRlncnKbrnllnbmmWd+iMDsv\/\/+ttVWW9mGG27osjEnnHBCa6fLTX8RmNqpUgSmQiwJYLRhw4a5v++\/\/353t2LKlCkVjpjsY3wfxhlnnGG77rqr+71QtJbWOHHixOB35yS7muazk7a9\/vrrXbrbf3FZIYEppcesrTFNeDeCLHnz\/0p0dswxx7jLz3vvvbd7nLe5tt56axdHChsZ3WXLlrnPXn75ZRs0aJBdeeWVmSu3V4JRqWdEYGqFpJkITIVY5imFvGbNGiMdzAnp0ksvbUIkL+UVyAh\/1l9\/fbc2avLbbLON+\/URDz\/8cIulwKyVySo0ZT1WAQJ58v8Klu8eiS0hFY\/Pt5x36tTJZW8asYnA1E7rIjAVYukv8c2cOdM222wzd4Ft+PDhmTtV8LufyCJtsMEG7lS0zjrrNCFSbo1Z\/e6M4gxMHtdYoUnrsVYgkBf\/b8WSP9SVrDN3\/\/wlXl5k4BIv5GTBggXuMi9v2yxdutQ22WQT69ixo73++uuufMTbgAceeGA102f2WRGY2qlOBKYKLO+55x679tpr3S+APPzww91bSFlrzzzzjJEK3nzzza1du3ZO\/IMPPti4M0JraY1Z\/e6MYgKTxzVmzQazKm8e\/L8a7LkDSJyYO3euix2QEv8aNXcDd9hhB3cfhvuBV1xxhVGm5hVqLtMXl5mqkSNLz\/KGJ+U03kTadNNN7fTTT7fBgwdnaQmpklUEJlXqkDBCQAgIASEgBIRADAIiMDEoqY8QEAJCQAgIASGQKgREYFKlDgkjBISAEBACQkAIxCAgAhODkvoIASEgBISAEBACqUJABCZV6pAwQkAICAEhIASEQAwCIjAxKKmPEBACQkAICAEhkCoERGBSpQ4JIwSEgBAQAkJACMQgIAITg5L6CAEhIASEgBAQAqlCQAQmVeqQMEJACAgBISAEhEAMAiIwMSipjxAQAkJACAgBIZAqBERgUqUOCSMEhIAQEAJCQAjEICACE4OS+ggBISAEhIAQEAKpQkAEJlXqkDBCQAgIASEgBIRADAIiMDEoqY8QEAJCQAgIASGQKgREYFKlDgkjBISAEBACQkAIxCAgAhODkvoIASEgBISAEBACqUJABCZV6pAwQkAICAEhIASEQAwCDUVgTjvtNHvggQc+hMu9995ru+22m7377ru2++6723\/+8x\/beOON7amnnrIOHTo09V+4cKFdeeWV9vvf\/95WrVplW2+9tfXt29e+973vWUtj+4cfe+wxu+yyy5rmf\/\/9922LLbawfv362ciRI92\/feMzfn7ppZfaYYcdVlaP48aNsxtuuKFZn80339zJ3pp2zz332E033WR\/\/etf7SMf+Yjtvffedv3117dmiGDfF154wUaNGmXz58+3Tp062Ze+9CW74IILbL311rM\/\/\/nPdvXVV9sf\/vAH+9e\/\/mWsgc+HDh1q6667rntm+PDh9re\/\/c0+85nP2Pjx45swO\/nkk61Hjx42YsSIFmUA0x\/96Ed255132htvvOH0u8MOO9g3v\/lNt1YaNvDvf\/\/b\/XujjTayLbfc0vbZZx8766yz3L9j22233WY\/+clPbOnSpbb++uu7eVjHvvvuGztEVL+3337b4fnggw\/amjVr7HOf+5z7P7a0cuVK+853vmPz5s2z1157zeHNOi+66CL3+T\/+8Q\/71re+5T7fbrvt7Lvf\/a716dPHzQtOc+fONfxinXXWiZIlr51CMeN3v\/udffWrX3XLx1ZuueWWZlD88pe\/tAkTJtiSJUucLXz0ox+1o446yk455ZRm9laMH\/0eeeSRZn3wE+zw0EMPtfPPP9\/5hW8vvfSSHXzwwc7vC2NJKb1MnjzZpk2bZosWLXIfI19hnMFX+Nkdd9xh2FjPnj1dLPL2EdJ1W9heOVxr6cv4wqxZs+zvf\/+784Wdd97ZLrzwQqeXWrZyvsw85XSGvvB15Nxggw3s29\/+tn3lK19x4hE3iY\/se62JYbVcWz3HakgCA\/HYZpttmnBl4\/zEJz5hv\/jFL9yG5tuPf\/xjFxRoa9eudRvEq6++6jakrbbaym2mbAR\/+tOf3Abw9NNPu77PPfecvffee65f586dmzYFNlgMqVu3bi6QPfvss7ZixQo75JBD7Lrrrmua9\/nnn7cjjjjCbS6bbrppWf17AoNDsUnRNtlkE\/vBD34QbTe33367XXLJJdaxY0cbOHCgtWvXzhGKu+66K3oM35GADwk89dRTmz1LUAO\/N9980wV6Ajob\/Nlnn23Dhg0zAtI555xjn\/70px15YFOmEajPPPNMO\/roo23DDTc01vuFL3zBOSiEBjzZlOnv119KaNZCPxwc0vnOO+8YhBRn97J6AtO9e3dHCP7yl7+4v9kQZsyYYdtuu20UHhBS8CNgYBtsFGxebC7lZCw1+A9\/+EOD+BXah+93+umn269+9Svbaaed3Log1mDPWpcvX269e\/e2XXbZxdkbmyFr9pvs97\/\/fYNozZkzx5FIiBuE5fXXX3c2z0Ycu2FFgZLRTp7AtBQz2NjBkQah+O1vf+vINw0b\/+IXv2irV692umjfvr2zC+xs0qRJbmPhsESsIGbQ6Mc4Xbt2dTr3NsnfHKb8weTyyy+3E044oQlVxsNGZ8+eHUQamyeOEb\/QdzGBgXwzPnb\/qU99yvkWhP83v\/mNiy2hVm\/bC+GKfLXyZeIhvsF4HK4gMsRk\/Il42ZpWqS8zRzmdPfroo86WsEP2IA6eEBfiJYdA9hfsOI+tIQnMueee607Exa1wQ3jxxRfdZu6zEGy2BH+CE6cufzIlIEFUChsnXQIEGY0DDzyw6SMfDP38ZD3YPCBPhZkh5vz1r39t06dPd5vONddc4zZ4AgOORNDccccd3biewNC31IYzceJEGzt2rDsljhkz5kNrJrjusccetmzZMrv\/\/vtdJqO4EeiuuOIKR7ggN2QSIDylNmMw43PIRWHzBIK5pk6d6jZ1gjtBAKL2\/\/7f\/3Nje5JAJoFN1G+4EDo+g5hBhAYMGOCwY7MdMmSIO9WWa+edd54L8IWBH\/JItsfP6YMe8iHnyy+\/bIMGDXJEi0AA1gsWLHD\/3n777ZtIVrl5fTCnDzpG1yGdFo43evRoF4wgF4UN2Q444ABH9ghabI577bWXI4isk1Mz5MnbBESFTBL9fCaRMZ944gkXHNkU2PzIynDSJ6uoZk2Z1VIxo9B3IJHEDPR14oknOui8fxceUDgIkeXEfnxjU8SmaWyShRtjsU16Oz7++OOdT\/qGnUI2+DzWvtj02PyKCcxnP\/tZR2zIwPTv398d6jjc4W9nnHGGhWIKh5V62l4MrjG+DHZkVP773\/+6mF4qc8XPyYYT7zmsggcZDx9v+fett97q\/hAnOCzgT4Vx3+uoUl+G1PpWSmcPPfSQfeMb33Dxm1hKNgY7wp\/RFb6P3+exNSSB4WTMiYpGsL777rsdy+b0ivOxAXDi59SMQRBQ2OwoXfA5Gy+GjKN7IlFoHDEEhqDAhnjjjTe6zbiwDHTssce6gEYfNh0MkM2J0\/SUKVPcaQiCg1yewPAzyloQEByIjZ8WCjac7gmwPE8Q5iT48Y9\/3KVJISKsm4wHhAy5OC3ed9997jNOajQ2TXChfe1rX3PYkDWhQXL4Q1YCJ8fRfKmH+RiPE15hQOc55ifNzWaA43PiYV2U+SAc4MAGzLPoK1TquPbaax35IfNGupxMz5577ukIgG\/FQY+fU3JCXtZAhiOWwFAyfPzxxx354NT8+c9\/3umCFtIppIc\/NDaXP\/7xj44M0ziFE2gJVmSv2LTQB80HN8qcPoXs10Yf8INsk7Uh2A4ePNidKBkTfLAnShsQrVAZIo\/BsNSa\/KGjVMzAJsGQTQtfhTz4DBhjPfnkkwbRIDsG6cXm8MtibGMJTK9evZz\/YE+UoyEtNHwCoop\/MX\/Ivspthm+99ZaTk4bdUU6mjAKhxW+wx1BMKcax1rYXg2uMLyNniMAUroVSLDGfgxaZNmyCQxaHLeIX+LCXECuJSeik1r5cisBApNE5GTIatkg\/DjhkWmtduk6T7zckgSlUABsfWRTP6v2GwKbO5k7248gjj3SPsGmQ\/fjnP\/\/ZNATEgs0FR\/ctRGAK54cUQV58UINIUeJAHjZbyACpQDYdNhoC189\/\/nOXVTnuuOPcXRA2S4IoJ2tOPhAvZMWpyHTAxvm3D0yF8\/OsD4Q4PQQI4sAYbGRs2JR2OIWQAqUdfvjhzkkffvhh+9jHPmbHHHOMPfPMMyXt2p9cGYMTQeFJFgen9kt2hsDrG9kmTnoECOq6HhtOO+ADmSCYkH0hbcp9Df7QD6JE9qG4EUgoR4Gjb2zYlA8hkLRSQY8MhT9Rc8+AcSBNPAuRbakV3k1Cf5SvSPlD9kI6LXWvyc+DHiBVvuzn\/8\/nfuOCqBSWQsnWYCtkmyB+BGHfWA\/kFWzRKxstuLNp0SBJ+EKjtlJ3YHzM8NkQSAU44ctsJviUz+qhy5tvvrmJ4IMjtk02w7cYAlOIP9lUNk0OXzT8lDIsPggBCdmXH6vUZkgsPOigg5w9YDc0v0ljN\/hbKKYUylov2wvhGuPLlOogV+gMGy+M4cX2zkEOck+2s9C\/yLSQvUTHZEqIzcRo9gz2jlr7cktZM+SFyGITZFs49L3yyitOVmyFuEN2HDvJU2tIAlMqHcwmTuAhhc5m60\/s+++\/v6tX+0YKmCwFp2vuyJCuLT7xhggMmQfuxnCS4HRGqtZfCmOTxwE4ZUEeWiqNUO6iTIM8nAho\/JsLfqSyKfFwOgw1n4GhH6lIiBAbNhs3JImAyP2eUo0MDOyeNCtEhIbjcFL0cnPi54\/PwLAhkF2hQZbIGhVmYCAzZDzIkHGiLM7MeDnQEdmT\/fbbz2V7wBA9kfqG9LTUKJWBOySNEwubNf+nxZ7aQpj6z1kbWRv0wF0HTmW0kE4hSn7zQE7+7Uty1N8hez4Dg8y+vFQqA4MNff3rX3d2SmmyVGobmSBE6POnP\/2pYfP4AfbEiZvT5mabbRa77Fz1Ky77+sWRcUQP4OoJOFkv\/BayWngHjI2FTC52Dr60QpuPITBkbiDtixcvdj46c+ZMRzxp+BblDQ5C2FvIvvwaSm2GMRmYWAXX2\/bK4VpLXwZbSCoHQR93PQY+i1yMiffLWvoyc5QjMF4GCCY2QNkPssx9S54jrhdfa4jVZVr7icB8UALhzgOnjuIGo2WDhtVCcNgA\/MnHn3jZkAsvSYUIjCdQ\/p5H4SbEyYwTAezdn9Y57ROcCsskZBsgALB\/7lXQkJ+TBATGp5hxIAgXfQprqX6dhaUxUuIYuydzbF407piQveFv3yj9kK3yFxb9z1u6A+NLMYWnODIYhW97cWmRjNInP\/lJlykovGhdqBf0Ad6U0SA5bLwEblLbpEzJRBU3CBmlMX8ypg+ZFwgkWStaTN2cAM+8ZIFaIgOQOX\/ZkUvAkCxKNuiUjB0n5HI6LZS9NXVzSmJkB319Hn2SGeCkSakSGy\/VkJd0M\/om88ZGDJFGdrIypMVLZe\/SGtRqKVdLBMYTyFJzUZbgJM5GAnH1fgee6IgN0b\/5yPMxBIZ7WRAm9MGho3AjpdyMnsmyxcSMcgSGz7AT3tTzxIyxWa+\/UB+KKYxRT9uLwTXGl5GTww4HDeJm4RunHiN0QzzkEMHdEg4DhY3SMJ9xH4lstG\/4EdnRWvlySGeF80BUyG6TfSGWUjWAwOy6667Obgqzs7X0lSTGEoExc6ciNvwuXbo0uwjLpVVO7BgnaVU2HjYu7r1AMjhhQBoIRoXkIJbAECQIPpABf3GUOS6++GIXqGj+YjFjEsDYoMgcsLHxM07LZCJ4c4b0L2SFkgUBBzISU68mg0QKFIfjng14kCGilANxg2hQMiJAQiq4hMgJknSqJ3MhAsNpibUiP5slQZAUp38LyV9EYxxk8AQA0lF4+dhnmZAFp\/zZz37mLmSz4VLigpggd3EDU7I0ZHRYA5sAui3MsPmgB9lDr7yF5F93R8c8F3MHhnGwB0gm8\/AHokT5CgIV0mlM0KOP31zBi\/EpIUA0\/J0u\/o2d8pp0YXCFzBTe\/cH2yVyRUUTPnPaxLzZcLj2TbczjK5gxAbclAuM3dbKLhVlCdMxBA\/\/gbUJIP9lE8Mff2eyIM\/iwL1nEEhiIhb+MDQFGL5AhNlEIOm8uxcQMYg2xjQu8EB7iCrGCzZnyK6\/sEvMYj00Pf+KgASkhAxiKKZR562l7kI4QrjG+DFahOzCUgsi8sH6w8I0MJWv0b2wRM7gDw4GQe2\/oqrhc09JhJOTLfB7SmZeLuI\/uKCtiX9gGB00ygpA0srB5KgmLwPz\/l9X8HY7iTIq\/vMbGTh2YEypOzwYOaydwEeD8HRlvRLEEhv5+Y2XTYH6Mi43Ivz7NHQXKWQQRghWpfGrtlBTYDAkm1HF5U4hSEk6G4\/i3T0LBBhlIh0NiIANseDg\/cvm7JATdq666ygU9ghPzskY2vuLLsy1lYJiHjZxnIAEEYN4sYs2QJAgIZaHiRoqWVKhv1OD5Q38yC2yyjEFgZ5NFzsL7NP45AjzPEYzAkYDEGihX+Ts2hd8DAwkkgJMx4cTi+8QQGNZBKYFsDUSMIMkYXq6QTmMJDOODJxkh9IYNkdVDbsgZdlKqka3yb5BB+LiwDn4QHRoE1r+2DTksfF03ZtPPU59SBIayEdhy8KCUU7ix+RQ\/WVbS+JBCMoYQQ07lkE2yrIUHntYQGAg1hykyr2REyBpwX67QR0L2xeaL3MXNl4R96dB\/Dwz2S\/bBZ+FCMaXetkesC+Ea48sxBIZ7dpTtipv\/ig2wIgtMbEEu4gp4kZ0vzniWIzDlfJm5QzrzcRzCwt7gv9cH2yPGQZ65XsBh0F85yIOfNhSBSbvCIEwQleJXZtMut+QTAmlHAMLLhUpemSVbxQbz5S9\/2YnN5gFRY6Mi80gZk4xmFhqEiQ2z+GsLsiC7ZBQC1SIgAlMtgjV8ntQomQnKGmpCQAjUDgGfdSNjwX0kMoWUebjDRdaKLCAnVYgOJRTuEWWhcejhLlapr3PIgvySUQhUg4AITDXo6VkhIAQyhwB3myhf+u+7oUTM21683UNJgK8xoKTm75RkboESWAg0CAIiMA2iaC1TCDQ6AmRXyLbwfTjcBeDuG3eHKBdxF8h\/WynZGT7Xr1JodIvR+tOOgAhM2jUk+YSAEKgpAlwm5y0WXhOmZMvXERQSGF6v5zuQSn3tQE0F0WBCQAhUhYAITAR8fB24\/7KziO7qIgRSh4D\/HVSpEywhgbj8yttVvGUSKiHJ\/xNSkqatGQJ59X8RmAgT4R1\/XltsqfF6deGXvEUM2aZdkP+Iq+8Pzrnwgdutx4H\/+w23LT0wc\/iAsngEJ2qDDmnXSSwEtVpHyIZj5clqP74fiUwLrzLzRWh8jxAXdcGFb7Llcq+\/xOt\/s7Nfawi7cv6VBV9pC53Wyo7bQtYk56gXTiEbTnLN1cwtAhOBXtaVH0tgIqBwXRSUY5FKT7+s23C1SPJdSnwbNI3vwOE1av\/9TbxGzQHEv0bN69aFv08rhJ0ITLXa0fP1RiBkw\/Wev17ji8BEIJt15YvARCg5512ybsNJqieEnQhMktrR3DEIhGw4Zow09hGBidBK1pVfDwITAVt0l7zWZ6MBaIOOWbfhNoCoxSlC2InAJKkdzR2DQMiGY8ZIYx8RmAitZF359SAwMXdqIqB1XVSSikWq8n5Zt+HKV179kyHsRGCqx1gj1BeBkA3Xd\/b6jS4CE4Ft1pUvAhOh5Jx3yboNJ6meEHYiMElqR3PHIBCy4Zgx0thHBCZCK1lXvghMhJJz3iXrNpykekLYicAkqR3NHYNAyIZjxkhjHxGYCK1kXfkiMBFKznmXrNtwkuoJYScCk6R2NHcMAiEbjhkjjX1EYCK0knXli8BEKDnnXbJuw0mqJ4SdCEyS2tHcMQiEbDhmjDT2EYGJ0ErWlS8CE6HknHfJug0nqZ4QdiIwSWpHc8cgELLhmDHS2EcEJkIrWVe+CEyEknPeJes2nKR6QtiJwCSpHc0dg0DIhmPGSGMfEZgIrWRd+SIwEUrOeZes23CS6glhJwKTpHY0dwwCIRuOGSONfRqGwMyfP99Gjx5t\/CbawYMH2\/Dhw5v0wVeJDx06tOmrxMePH2\/du3dv+jzryheBSaPrta1MWbfhtkWr+Wwh7ERgktSO5o5BIGTDMWOksU\/DEJilS5fasmXLbO7cubZmzZpmBGbUqFHWvn37pl\/mNnnyZPeL3nzLuvJFYNLoem0rU9ZtuG3REoFJEm\/NXXsE8ur\/DUNgvEnwS91WrlzZjMD069fPpk2bZt26dbO1a9da3759bc6cOda1a1f3WNaVLwJT+4CQtRGzbsNJ4h3CThmYJLWjuWMQCNlwzBhp7NPwBGb16tWuXLRw4UKXhaENHDjQxowZY3369BGBKWG1fPW\/fpVAGt25ZZnyGsBitcBvop40aZItX77cunTpYiNHjrT+\/fu7x6stIYvAxGpB\/ZJCIK\/+3\/AEZtWqVdajR49mBGbAgAE2duxY6927twiMCExSMaem8+Y1gMWC9NBDD9muu+5qW2yxhT366KPuztvTTz9t7dq1s2pLyCIwsVpQv6QQyKv\/NzyBwaBiSkhDhgwx\/mSxqYSURa3VTuYJEyYYf5YsWVK7QTM80nvvvWe9evWyZ5991jp27Bjl\/+WwE4HJsDE0iOgiMDlRdKk7MKSTO3To0HSJl1TzjBkzmlacdeWLwOTEeKtYRtZtuIqlf+jR22+\/3WbNmmWUlWpRQhaBqaV2NFY9EMir\/zdMBmbRokU2aNAgW7FihbOPjTbayG688UbbbbfdXA2c7MrixYutc+fONm7cOOvZs6cITAuepDsw9Qgx9R0zrwGstag98cQTdvHFF9ttt91m2267rdWihCwC01otqH9bI5BX\/28YAlONwWRd+crAVKP9fDybdRuuhRa48zJs2DCbMmWKe7PQt2pLyCIwtdCOxqgXAnkuIYvARFhN1oO\/CEyEknPeJes2XK16FixYYGeffbZNnDixWXaVcastIYvAVKsdPV9vBPLq\/yIwEZaTdeWLwEQoOeddsm7D1aqH8vG8efOsU6dOTUNxB4bvfqq2hCwCU6129Hy9Ecir\/4vARFhO1pUvAhOh5Jx3yboNJ6meEHYiMElqR3PHIBCy4Zgx0thHBCZCK1lXvghMhJJz3iXrNpykekLYicAkqR3NHYNAyIZjxkhjHxGYCK1kXfkiMBFKznmXrNtwkuoJYScCk6R2NHcMAiEbjhkjjX1EYCK0knXli8BEKDnnXbJuw0mqJ4SdCEyS2tHcMQiEbDhmjDT2EYGJ0ErWlS8CE6HknHfJug0nqZ4QdiIwSWpHc8cgELLhmDHS2EcEJkIrWVe+CEyEknPeJes2nKR6QtiJwCSpHc0dg0DIhmPGSGMfEZgIrWRd+SIwEUrOeZes23CS6glhJwKTpHY0dwwCIRuOGSONfURgIrSSdeWLwEQoOeddsm7DSaonhJ0ITJLa0dwxCIRsOGaMNPYRgYnQStaVLwIToeScd8m6DSepnhB2IjBJakdzxyAQsuGYMdLYRwQmQitZV74ITISSc94l6zacpHpC2InAJKkdzR2DQMiGY8ZIYx8RmAitZF35IjARSs55l6zbcJLqCWEnApOkdjR3DAIhG44ZI419RGDM7MILL7Q5c+bYBhts4HR01llnGb87xbesK18EJo2u17YyZd2G2xat5rOFsBOBSVI7mjsGgZANx4yRxj4iMB8QmL322ssOO+ywkjrKuvKzQGBq7Rx77LGHTZ06tdbDZna8rNtwksCHsBOBSVI7mjsGgZANx4yRxj4iMCIwrbbLmcMH2BFX39\/q51p6oNbjMQ9jLlmypGYyZn2gvAawWL3Mnz\/fRo8ebS+88IINHjzYhg8f3vQov4166NChtnjxYuvcubONHz\/eunfvHp2BFYGJ1YL6JYVAXv1fBOYDAvPwww\/beuutZ7169bJLLrnEtt122+gAlpRRxs6bhQxMLQmRCMyHLSOvASzWB5YuXWrLli2zuXPn2po1a5oRmFGjRln79u1txIgRNnv2bJs8ebJNnz492v9FYGK1oH5JIZBX\/xeBMTOC25Zbbuls64YbbrBHH320VQEsKaOMnVcEJhap\/PbLawBrrcauvfZaW7lyZTMC069fP5s2bZp169bN1q5da3379nV34rp27eqGD2EnAtNaLah\/WyMQsuG2lqdW84nAFCH5zjvvuAC2cOFCW2eddZoC2JAhQ4w\/WWwiMFnUWu1knjBhgvFHJTWzYgKzevVqVy7C38nC0AYOHGhjxoyxPn36iMDUzgw1UoIIiMAkCH69p37ppZdsxx13tPfff9+lj++77z6bNWtWdAq53vJVO74ITLUIZv\/5vAaw1mqmmMCsWrXKevTo0YzADBgwwMaOHWu9e\/cWgWktwOqfSgTy6v\/KwJjZiSee6AJYu3btXDC77LLLXNrYt6wrXwQmlTGlTYXKug3XCqxKS0jlMrAqIdVKOxqnHgjkOQMrAhNhMVkP\/iIwEUrOeZes23Ct1FOKwIwcOdI6dOjQdIl30qRJNmPGjOgDjAhMrbSjceqFQF79XwQmwmKyrnwRmAgl57xL1m24WvUsWrTIfTnlihUr3FAbbbSR3XjjjbbbbrsZr1GTYfGvUY8bN8569uwpAlMt6Ho+NQjk1f9FYCJMLOvKF4GJUHKgy\/HHH29PPvlk9QN9MMLmO3zKnvrVfTUbLzRQ1m04tL56fh7CThmYTojqrQAACi5JREFUeqKvsWuBQMiGazFHEmOIwESgnnXli8BEKDnQpR4YtuVbQVm34eo1WPkIIexEYCrHVk+2DQIhG24bKWo\/iwhMBKZZV349Nt9afvFcFr6Jtx4YisBEOF8KuoT8XwQmBUqSCGURCNlwVuETgYnQXNaVX4\/NVwQmwnDKdGnrX3WQdRuuDu3qng5hJwJTHb56uv4IhGy4\/hLUZwYRmAhcs658EZgIJauEVD1IOR0h5P8iMDlVfI6WFbLhrC5VBCZCc1lXvghMhJJFYKoHKacjhPxfBCanis\/RskI2nNWlisBEaC7ryheBiVCyCEz1IOV0hJD\/i8DkVPE5WlbIhrO6VBGYCM1lXfkiMBFKFoGpHqScjhDy\/xCBaQmWPfbYw6ZOnZpT1LSsNCEQsuE0ydoaWURgItDKuvJFYCKULAJTPUg5HSHk\/yEC09KF97a+yJ1T9WhZEQiEbDhiiFR2EYGJUEtbK7\/WX5rGEtP81lC9XqOOUG2rutQaQ71G3Sr4E+sc8n8RmMRUo4kjEQjZcOQwqesmAhOhkrZWfqNlTOpFYGpNOGo9nghMhPOloEvI\/0VgUqAkiVAWgZANZxU+EZgIzbW18kVgIpQS6FJrUlSP8URgqtdzW4wQ8v96EZhymVjdn2kLzednjpANZ3WlIjARmmtr5YvARChFBKZVILW1DbdKuJR3DmFXLwITGrctCXDKVSTxAgiEbDirAIrAmLnfRjt06NCm30Y7fvx46969e5NOQ8rXnZXqzL\/W2Q2kqfWY9RivOtSaPx06kYdsuJayZG2sav0\/RDTKXeINYaULwCGE9HkMAnn1fxEYMxs1apS1b9\/eRowYYbNnz7bJkyfb9OnTowmMMiYxLtRyn1qTg6wQmLa8U5PXAFad5f3f0\/X0\/3K2HbL70LPKwNRC+40xRl79XwTGzPr162fTpk2zbt262dq1a61v3742Z84c69q1q7PukPJFYKoLAqFAXsnotR4zC+OV29BCNlwJxnl5pp7+HyIh5Uhs6NmW8A9l4\/KityTXkcT9pGrmzKv\/NzyBWb16tSsXLVy40GVhaAMHDrQxY8ZYnz59GorALHzgdutx4AnBuJD2zTxPGZjW6EQEJmi6H+pQb\/8PkZBqCEyWyksTJkywIUOGtF5BKX0iVDasNDtWDqdq5hSBSakhVSvWqlWrrEePHs0IzIABA2zs2LHWu3dvN3w97rhUK7eeFwKtQUCn8tJoyf9bY0Xqm1UE8ur\/DZ+BwSBDKeSsGq3kFgJCIIyA\/D+MkXoIgTQiIAJjZiNHjrQOHTo0XeKdNGmSzZgxI436kkxCQAjUGAH5f40B1XBCoI0QEIH54DVq6rOLFy+2zp0727hx46xnz55tpAJNIwSEQJII8Bq1\/D9JDWhuIVAZAiIwleHmniJLc80119j7779vRxxxhF1wwQVVjFb\/R\/fdd1979913rV27dm6ym2++2Xr16lV2LaHvyKi\/1Gbz58+30aNH2wsvvGCDBw+24cOHN01bTr7nn3\/ezj\/\/fHv77bdtl112Mb7fp2PHjonqrtxaLrzwQvf22wYbbOBkPOuss2zQoEHu32lcS1voPs1zZM3\/2wrLSu24reRLap7vfOc79tBDD9nrr7\/uYhlZf99asqU0xN+k8IqZVwQmBqUSfd5880075JBD7L777rMuXbrYUUcdZTjuPvvsU+GI9X8MAnPPPffYFlts0WyycmsJfUdG\/aU2W7p0qS1btszmzp1ra9asaUZgysnH22TnnXeeHXDAAXbppZdap06d3P+T1F25tWA\/e+21lx122GEfgjWNa2kL3ad1jiRtKK2YeLkqseO0r6kW8j311FO2\/fbbW\/\/+\/ZsRmLTH31qsvV5jiMBUiOzUqVNt3rx5LgND48vvFi1aZFdddVWFI9b\/sZYITLm1pOmC47XXXmsrV65sRmBako9M04knnmiPP\/64A5YTz9lnn+1OQGnQXam1tBT4X3755VSvpf6Wm74Z0mBD6UPl\/ySqxI7TupZ6yMUrzYUZmKzE33pgUe2YIjAVIsg9GUpHnOhppP7vuOMOu+WWWyocsf6PQWBolJD2339\/RwRIY7a0Fi4zh74jp\/5S\/2+G4k2\/3Hd4rFixwpWM\/DcqU0bi5PPiiy+2uN621F1LBObhhx+29dZbz5X2LrnkEtt2223tscceS\/Va2tIG0jJXFv2\/rbCDwLTWjttKtjTMU0xgshJ\/04BdsQwiMBVqBaOjDRs2zP19\/\/3321133WVTpkypcMT6P\/bKK6\/YdtttZ8uXL3dy77TTTo6AtbSWiRMnBr8jp\/5St0xgyn2HxzvvvGN8KdTdd9\/tBqCWvOeeezYRmKR1V4rAUF7acsstnbw33HCDPfroo46AQWDSvJa2tIG0zJVF\/28r7Cqx47aSLQ3zlCIwpeJR2uJvGrATgamRFrKeQn7ggQdctujWW28tW1LJcgnphBNOsCeeeMJpPAslpELThIDxKy34hui\/\/OUvlua11MilMjVM1v2\/rcCOteO2kicN86iEVDstKANTIZb+4tXMmTNts802s6OPPtqVZNJ6iZesy3\/+8x\/3+524H8LbOdtss4377ptya0nTd2SUylqUk49vVGad\/hIvbyDxplgadFdqLS+99JLtuOOOrjTJnSouiM+aNctZaJrXUqELZfqxNNhQWgGsxI7TupZ6yFVMYLISf+uBRbVjisBUgSBv9LAR8QsgDz\/8cHd5La2N8tEpp5ziykfrrruue9uFzd+\/VtzSWtLwHRlcjuZ1Yu610DbaaCO78cYbbbfddnOloZa+w2PBggWOVLLmnXfe2V245k0kWlK6K7cWLh2TceGOEr\/e4rLLLnO\/SJSWxrWk1dbbSq6kbKit1lfpPJXacaXzZeU5fzfojTfecKXi3Xff3a677rqy8SgN8TfN+IrApFk7kk0ICAEhIASEgBAoiYAIjAxDCAgBISAEhIAQyBwCIjCZU5kEFgJCQAgIASEgBERgZANCQAgIASEgBIRA5hAQgcmcyiSwEBACQkAICAEhIAIjGxACQkAICAEhIAQyh4AITOZUJoGFgBAQAkJACAgBERjZgBAQAkJACAgBIZA5BERgMqcyCSwEhIAQEAJCQAiIwMgGhIAQEAJCQAgIgcwhIAKTOZVJYCEgBISAEBACQkAERjYgBISAEBACQkAIZA4BEZjMqUwCCwEhIASEgBAQAiIwsgEhIASEgBAQAkIgcwiIwGROZRJYCAgBISAEhIAQEIGRDQgBISAEhIAQEAKZQ0AEJnMqk8BCQAgIASEgBISACIxsQAgIASEgBISAEMgcAiIwmVOZBBYCQkAICAEhIAREYGQDQkAICAEhIASEQOYQEIHJnMoksBAQAkJACAgBISACIxsQAkJACAgBISAEMoeACEzmVCaBhYAQEAJCQAgIAREY2YAQEAJCQAgIASGQOQREYDKnMgksBISAEBACQkAIiMDIBoSAEBACQkAICIHMIfD\/ATkiNwkPd89CAAAAAElFTkSuQmCC","height":337,"width":560}}
+%   data: {"dataType":"image","outputData":{"dataUri":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAFRCAYAAABqsZcNAAAAAXNSR0IArs4c6QAAIABJREFUeF7tnQnYVVX1\/5cDYuKAM0YDZkI4xKAipuaQWuCAOeeAUc6mUA4gDgiKaIWAQ2UGqSkqCmKEYA5pqJkTmRaCpJai\/tRwwpSY\/v\/P\/rnf3+Fy793r3Peec889Z+3n4VF499nDd6313d+99j7nXW3FihUrxIohYAgYAoaAIWAIGAJNhMBqJmCayFo2VEPAEDAEDAFDwBBwCJiAMUcwBAwBQ8AQMAQMgaZDwARM05nMBmwIGAKGgCFgCBgCJmDMBwwBQ8AQMAQMAUOg6RAwAdN0JrMBGwKGgCFgCBgChoAJGPMBQ8AQMAQMAUPAEGg6BEzANJ3JbMCGgCFgCBgChoAhYALGfMAQMAQMAUPAEDAEmg4BEzBNZzIbsCFgCBgChoAhYAiYgDEfMAQMAUPAEDAEDIGmQ8AETNOZzAZsCBgChoAhYAgYAiZgzAcMAUPAEDAEDAFDoOkQMAFTxWTdunWTDz\/80NVYc801ZbPNNpMDDjhAzjnnHFljjTXcv5fW2WSTTWSvvfaSCy64QD7zmc+0tP7nP\/9ZvvOd77i\/77777nLjjTe2\/Ozvf\/+7a9eXtdZaS77whS\/ISSedJIcddthKI7z55pvl17\/+tTzwwANVnW3p0qXSuXPnVepccsklcswxx6gddcaMGTJ69Gh59dVX5bOf\/aycfvrpq4wp2tj7778vw4cPd+NbtmyZfP3rX3d\/33TTTV21N998Uy699FIBD7AFr29\/+9vywx\/+UFZffXXx81uwYIGAw1ZbbSWDBg2SPfbYQ\/i9o+A6bdo0WXvtteVHP\/qRHHXUUa7d2bNny\/HHHy\/333+\/s1OlMnfuXLnsssvkL3\/5iyxZskS22GIL6dmzp\/zkJz9xj4A5bVDatm0rG2+8sXTv3l1OPvlk2X777dW4UXHOnDlu7oxt\/fXXd\/M899xznS+VK9XmTn3scO211670KPg98cQTdcEm1uSscgsCUZ\/BR\/H1Xr16ybBhw1r8PlqHBzfaaCPp0aOHDB06VLbccsuWtj7++GPZaaed5D\/\/+Y+st956zrb4oS8aTqLuiy++KPvtt5973sdeJZM98sgjMm7cOPnrX\/\/qYgKeGjlyZEt15sTPb731ViG+u3btKhdddJEbf9wyYcIEF\/8U2jzwwAPLNvHGG2\/Ieeed52IHngCjKOfddtttcuWVV8onn3zi2qDN1VZbTT744APZZ599XIzz30qFeTDHhx56yD1DHDGviy++WDp27CjRccJD2KJLly5y9NFHS9++feNO29WvNHf+fdKkSTJv3rxVcHnnnXccNz711FPyuc99Tn784x+34P7zn\/9c7r33Xrnrrrvc3ItYTMBUsbonC\/4LiUAGlKgI8HW+8Y1vOCdn8Vu0aJGceeaZbuH1hYBngaIgfv70pz+5oKFEBQzih+B94YUX3M9mzpy5khA58cQTnbi58MILq\/qrFzAbbrihbLfddi11WeT33ntvla\/7cRHAe+65pzz22GNubszja1\/7Wtk2WOjvu+8++cpXvuJEBkIBQr799ttdff9zCH7bbbeVKVOmOFJkYe7Tp48j\/X\/84x9OhNA\/QU3\/YP\/ss886kUL\/Tz75pFxzzTWO4NZZZx0nDvbff38nQCqV5cuXO0H1+uuvO2G0+eaby7\/+9S+BJOiL4hcahE379u3l5ZdfdiTZpk0b+cUvfuHEqaYsXrzY9fX22287wfrSSy8JogwBeNZZZ5VtotrcEUBewOBz\/J2ywQYbyFVXXSWzZs1qFTaaOVmd8gh4n+nUqZN8\/vOfl2eeeUY++ugj549XX331Sn6FzxOP2As\/JA5YjH2555575Ac\/+EHL3\/E5hIgvGk6i7vjx411sTZ8+PWi2m266yS2gCBVEd6mAYcME5yGEvvrVrzohAdf98Y9\/dP6nLcQSMc7Ghj\/VBAzjIFbYNME7UQGDyGMc\/Bz8jj32WLepY5PDOIk1\/l6tsPmZOnWq42C4ijhlc4MYAGMvNtZdd13HFWzgFi5c6JqsFsOV+qw2d8aCL8BFbPCiuPz0pz91fMc6wOYHMccYqYdfsBGuRUhqbZb1eiZgqljIk8XEiROld+\/ecvbZZztSQIX7XURpHZT\/r371K5dRYWGhICZ4ngAgWBAnI0aMcIFHiQoYgg8iYfFjwYMAIULKf\/\/7X5ctQHmzKOLwjAPCJHtBACNsWNy8gCnN9kSn+\/3vf1\/+8Ic\/VCQSH+TsAM444wyB6NihMLYbbrhhFeQIUsRRu3btnMBg0d91110dOYAbmQx2L8yfthkbO1DIymMcbZSdEc9QEIavvPKKnHDCCUJWiB0J2Rh2jZD09ddf74KcPisV8KRPSIsMkN+1IJggKYpfjLwAhTAQouAEmULaYB3CDsHGDhK7MzeE2Le+9S2BEBk7oqxaKZ37l770pRYBM3ny5FVI68EHH2wVNlknqiyPr9Rn7rzzTrfYYDOfzSutw7\/zbz6D5ucX3QAQJ8QLQt0XDSdRt3\/\/\/m6Rh7PYdJCt+P3vf++yDbTBhmrrrbdeCVZ4hUxkqYBhs8KCSQZm5513dgILocUcTznlFBd7o0aNWuW5aONsHnw2GX549NFHqwoY\/ywblEMPPXQlAcN8yIbCRbvttpvsu+++8stf\/tLVIRsDH0SzWuV8h+cQDdgBO1HeeustlzVHnHkB4wUm40dYeEGKiKOPes6dzRnCNipgWE8QLIg4OJP1gfnByWRyfeY4y\/GR5NhMwCgFDLsmFk8yAQQOBEEpzcDg2JAEpOOFx8MPPywDBgwQdmgEP6QSzUqUChgWWp6lnWgGhlQvGRiyGgiUb37zmy4IjzjiCCdu2FEgYth9eAHDQokg4iiEQOf4i0WUElqE2S2xK0GQIUw8mbATQwCUFoQFuxOIk7FQfFASiBz3sLAjWhgThf+CJ\/V8YZ4QHP2BN9ktiII5nXbaaU5EUMDSZ5TYqTD3aoVd8Y477ihkRxATkDHkHCXy0oWG9hBmjIECeZBqDmFHNuU3v\/mN8xnmS0G8YidPfuXGWmnu1PUZGAiWVD8pbS8EW4tNkiST97ajPoNPYqfrrrvOZRv8kZ+v4zMw2Jk4P+6449wxIwWxDC\/gnwh+Fm7iF8HrYzYqYCpxEhkKduX4H+0RM\/AImwn6Z\/OBDyHKfbv0X07AvPvuu7LDDju48f3tb39zC7yvh1hgsdUs4mSSqIvwId5LF+pKPlJOwFD3Zz\/7WcsGkQ0VOBOTzG\/w4MFBl4OL4BbwJLbhAjaH\/mpAqYDxXIXwIUNOfMM99Zx7OQGDj7B2vPbaa+4UYOzYsc5m3\/ve95z4Ch0PBoFo8gomYKoYMHre7KuxO4Fw\/D2GcnVwKgjMZw985obFjAWeRZQFBxLjvLX0Dgx9QVz0c+SRR7aMEBFAtoD0MAspWRF2CAQz5aCDDnKChnNdsgUszvRFULJochQCKXrVTv\/srAheUt+lhbY5XvHZEcQMpEx7nLGXlltuucVlgKJpcU+eLLSQO2KAjAbnuWRDIHuEBYLH39mJ3vXgeIhMRvTeDgQN\/mRbyGSR3qV98CLbw6610jENIovd57\/\/\/e+W4UPs7OAg53IChnT3l7\/8ZZexIQsFiYWwwzbYKHqUyKLCcRkijoWlXKk29zFjxrh+EcLYAr\/BT5iT33G2Bpsm57KGDb\/0fgsDIe5YVP0CU64OcURMH3744W7sPnPjNwBsYshOkj05+OCDXR0NJ7Gw4f9PP\/20IECIb+KIo10WQQTE7373O5c1ifJLOQED37DxYaNB7FI4tiDW4BeON8gukgnFB73YiRqDn8NNCHk2fuUW6rgChvpwKEKeuCW7BPcg\/C6\/\/HI3HrAiQ+2PW0vHRBYDfH354he\/6DZrZGPLCRjqgRfZZX+MVM+5V8OFzSyiEzuAJUfmHLNjMwrj8RvmhgVCAzo2AVMFdE8WLLSo7vnz57vF4+6773bOFCUUFnkWJRY4zmH9mS27Kf6dtKdfuLz6Z2EmoxIVMOxqSBeywJamjznz5NgJEmBHw4WucsWfB5P25LiD4rMjBDMZHE3xGRgEE3c\/tBkYcCPtSSnNwLDbgQjZVXKR0S\/YpM6jOyeIiXGy++BCoz+CKiWhQw45xO3qSGUjwugPjBAklS7xgctzzz3nsjzgiG18hkibgQnh5zMwtDdkyBBXnYwJ86qWgaFepblH7cn\/c0zJMQPEDU71wCY0L\/v5qgh4nyHDxr2pxx9\/3N3\/4siFWKCU+hX3ufBdCtkINhzENQLVH9my2+YYmtgjBqN8U42T8D02HggoYsj3Uzry0pirNQMT8gmOXRDfZEjhI+bOcTqZTOYcFVGlbVXKwETrwbHEOqKNthFqZEbYMLKo+wxouXFyLA3fIlg4nunXr58ba6UMDJsdNn0+A1PPuWuEHZtE+J11Br\/AV\/zxFvcq4dQiFRMwVawdTdciQlC+KPZo4JeeSbPrYUfF7gp1TuoWdVyubLPNNm4nVHqERBaFhZ7A9GLE398gu8IlXt7EGThwoNvx8F9fOKJgB8fuhFSjTxF7AcOlXsZIgWjpix0amaDSQnAg1nz2xN+B8fdqWGgZB9kQsCl3B2aXXXZxYox7G4zLH9dA1JC2vzPkMSVD4S8Gkvng8jBzj+5C\/TgRKmQ1GB8ZEjIrkADn47QXvQzJMwgV+oXsfAbNZ4gQGSwy2jswIey4mAlxRnepHFv5N0sg8ih2jC80dwjWn9ezE4OcETDRI81asSkS6dV7rqU+Q3aCLEVUyJfWIXb4OVlRNjZsjLgv5Y9Wo2PEVzmyJXY1nMSRCpyDMCAjSXzDAwia6NsqZIcQ1b5UugPDuLgf4jdgtA2fcBx96qmnumwsGwJ802edo+PnOJ34LVf8ESt3uN577z0X79FFWCNgEEiIQC4ikyGHP9iYsDmEQ+Gt0sL4ESM+O+OzSv4IvlTAwEWIydI7MPWYux9bSMDADxzlcxRH5pWNMFlexgb\/3nHHHWUzYPX29yy1ZwJGKWAIYsQICx5kwO6dxSh6B4YLef5sm0Ama+CDnbRk9GIZuwTIhN04aX\/\/GjWLFMWToD+OIcPDLsy\/SshizIKIAIGoEAP\/\/Oc\/3c9Jcf72t791CxvkRYoVgiCTET1zD93jeP75592lOHaTCCpIgnN6f4ziL5oSTP6tqehZP88hlhBZBBeF3SC7Qv6NNDvn9IzLv9kEnmAHuSIW+UM74BUVWRAQ6WHS5cyP8SGQIC0W9ugdJG9iT+aQFkIKkceOjUWDjBH9+vGTnoVIEWWQIMdVZHX8PZsQdtiUhQTxBulAdBx1+dRzOexCc2fHxQVIjtpI7bNocDQAFtEjwFqwyRIpNdtYSsUJiz22ZzPhj1+jcYGfsmnB9\/BtuAQxS7xyVy36VgkX9MlW4Ou8PFC6YSrlJDIvxAJZhQ4dOjgo\/cVgjj7ZiOGT3CPj+JV\/4y4Iiz8xzLjgKcaA35IF9os57bE54LgG7uNuH6JKcw8katNyC7W\/3O8vqBOrV1xxhRsr\/cC5ZKA55uF41hc2N\/Ag4ooNIZsGNhfwCQs8MePvGEXHAEY8Cy8jeOApRKXPivs5E28IM7iVmKVE30Kqx9zxEewMvzJvbEQ8wzFkqXzBP8j+IM7gfTaS2BABQ9YfP6r2CYlmiyvNeE3AxBAwLHScByMy\/O4jeibtL8uyMJ9\/\/vkuuPl\/iIxMRvQ7Ij6IuSNBYJYKGIKL4GORJajZHbGAk7r0hcWV816cH2HBzyEkHJ3jLlLQBCY7G14ZRqWTlfDflQgtwvTD8Yz\/DgwE5nd2\/KzcIsyZO\/1zQZCxE2QQiCdTLqNx9g5p8jzZJHZhPo0MOfEz2oFYICXGHL0zgqCAgDhy8t+RYIcKebF4gCXfePDHZx4vnmP3AlFASBAWZM3i4u8YRO8qIMwQpQgbjqiir6NrsEN8gQULFQRMeppMD2KoHHahuUOW3BXi7TPmhj+RNo8ueLVioyELq1MegXLHjsQ\/R0g+W1l6BwZ\/QERjP7J0ZG2JVZ8J9D35rIjfyJQKmFJOIra5S0Pc+oKvwQUIDwQOwhxeIn7gDJ8tLJ2dz4r6Iwr\/HRhikjcA\/X2XeizipQImenE+Oq5oVot\/hxvgCf\/dGhZ47tgRc8QtWZNyF12ZM5s8eBJ8qAMH8CzZ8+g3W4hXNj1kq8jwRO+a1GPuPtNdir\/PvvPv3Hnj\/iKClfuDFDaSPiPEuON83ysvsVwYAYPDksHAWdnlIATITlBYLHEAnJkzbM5Ay30ErlFGZ6HlhjxZhdCbNo0ao\/VrCBgCjUeAjRECQ\/MmTuNHayMwBFqHQGEEDEco7FhR2uzAESwctbCTJUOAymYHz5ki6pusR1YKaUUub7Ejin7dNyvjs3EYAoZANhAgY8Mdr9JvvGRjdDYKQ6C+CBRGwERh40iH4wCOXkjlkp7lDJiLdKRLyXaQqvPHHvWF3FozBAwBQ8AQMAQMgdYiUEgBQzaDS3McK\/kPvnHG6L\/iynksZ6pF\/kRzax3LnjcEDAFDwBAwBJJEoHAChtv5XLDjljoX2PwXTaMChu+fcNG03CuBSRrD2jYEDAFDwBAwBAwBHQKFEjDceeHWP5\/S9t\/TAKbQERKvL\/JqnhVDoFkR8L+TqVnH38hxW\/w3En3rux4I5DX+CyNgeK2OV4B57S36bj3OwRtJvH7oL\/H63+TqHQex47\/PUs6ZeDU3+jG5ejhcEm00yziZe7OMtVnGGfLhJPwtL22GsOPn\/a6YUXG6dw\/uU5U\/0sKpWXzV4r\/+HhHy4fr3mE6LhREwfLKaz9dHfy8Gd2C4uMtr1AgQ\/xo13z2Jipy8Gj8dF7NesoCA+XDtVghh1ywCpnYE7MlmRyDkw806v8IImNYYKK\/Gbw0m9mxzIWA+XLu9QtiZgKkdW3syHQRCPpzOKOrfiwkYBaZ5Nb5i6lYlJwiYD9duyBB2JmBqx9aeTAeBkA+nM4r692ICRoFpXo2vmLpVyQkC5sO1GzKEnQmY2rG1J9NBIOTD6Yyi\/r2YgFFgmlfjK6ZuVXKCQNF9uDW\/SiSEnQmYnARJjqcR8uFmnboJGIXl8mp8xdStSk4QKLoPt+ZXiYSwMwGTkyDJ8TRCPtysUzcBo7BcXo2vmLpVyQkC5sP\/Z8i4v0okhJ0JmJwESY6nEfLhZp26CRiF5ULGD33oKq8fEVJAZ1UygkDIhzMyzFSGEfdXiYSwMwGTitmsk1YgEPLhVjTd0EdNwCjgDxnfCEwBolVpKAIhH27o4FLsvJZfJQJ2fCeq0scqLf5TNKB1FRsBPmDIn2ofY43daEYeMAGjMESI\/I3AFCBalYYiEPLhhg4upc5r\/VUiIews\/lMyoHVTMwIhH6654QY\/aAJGYYCQ8Y3AFCBalYYiEPLhhg4uhc6T\/FUiFv8pGNC6aBUCeY1\/EzAKtwgZ3whMAaJVaSgCIR9u6OBS6DzJXyVi8Z+CAa2LViGQ1\/g3AaNwi5DxjcAUIFqVhiIQ8uGGDi7jnYews\/jPuAFteBLy4WaFyASMwnIh4xuBKUC0Kg1FIOTDDR1cxjsPYWfxn3ED2vBMwBTZB4zAimz9fMw95MP5mGUyswhhZwImGdyt1fohEPLh+vWUbkuWgVHgHTK+EZgCRKvSUARCPtzQwWW88xB2Fv8ZN6ANzzIwRfYBI7AiWz8fcw\/5cD5mmcwsQtiZgEkGd2u1fgiEfLh+PaXbkmVgFHiHjG8EpgDRqjQUgZAPN3RwGe88hJ3Ff8YNaMOzDEyRfcAIrMjWz8fcQz6cj1kmM4sQdiZgksHdWq0fAiEfrl9P6bZkGRgF3iHjG4EpQLQqDUUg5MMNHVzGOw9hZ\/GfcQPa8CwDU2QfMAIrsvXzMfeQD+djlsnMIoSdCZhkcLdW64dAyIfr11O6LVkGRoF3yPhGYAoQrUpDEQj5cEMHl\/HOQ9hZ\/GfcgDY8y8AU2QeMwIps\/XzMPeTD+ZhlMrMIYWcCJhncrdX6IRDy4fr1lG5LloFR4B0yvhGYAkSr0lAEQj7c0MFlvPMQdhb\/GTegDc8yMEX2ASOwIls\/H3MP+XA+ZpnMLELYmYBJBndrtX4IhHy4fj2l21JhMjCzZ8+WESNGyJw5c2TAgAEyePDgFqTfffddGTRokMyfP1\/at28vY8aMkc6dO7f8PGR8I7B0ndZ6i49AyIfjt1icJ0LYWfwXxxeadaYhH27WeRVGwCxYsEAWLlwo9957ryxbtmwlATN8+HBp06aNDB06VKZPny4TJkyQyZMnm4BpVq+2ca+CQF4JLA1Th7AzAZOGFayP1iAQ8uHWtN3IZwsjYDzIY8eOlcWLF68kYHr16iWTJk2STp06yfLly6Vnz54yc+ZM6dChg3ssZHwjsEa6sPWtQSDkw5o2ilonhJ3Ff1E9o3nmHfLh5pnJyiMtvIBZunSpOy6aO3euy8JQ+vbtKyNHjpQePXqYgGlWz7Zxr4RAXgksDTOHsDMBk4YVrI\/WIBDy4da03chnCy9glixZIl26dFlJwPTp00dGjRol3bt3NwHTSO+0vuuGQF4JrG4AVWkohJ0JmDSsYH20BoGQD7em7UY+W3gBA\/iaI6SBAwcKf8oVI7BGurD1HUJg3Lhxwp+XXnopVDW3P7dL\/Lk1rU1MgYAJGAVIzVCl3B2YYcOGSdu2bVsu8Y4fP16mTJnSMp2Q8U3ANIPliz3GkA\/nHR27xJ93C9v8qiGQ1\/gvTAZm3rx50r9\/f\/noo4+cndu1ayfXXXeddOvWTXiNmuyKf4169OjR0rVrVxMwxgm5QSCvBBbXQHaJPy5iVj8PCOQ1\/gsjYFrjhCHjazIwof579+4tEydODFWznxsCNSEQ8uGaGm3Ch0oFjF3ib0Ij2pBjI5DX+DcBo3CFkPE1AqbfFTOq9nT34D6FvqOgMINVaQUCIR9uRdNN9WipgLFL\/E1lPhtsjQjkNf5NwCgcImR8EzAKEK1KQxEI+XBDB5di57UeIdkl\/hSNZF3VFYE8X+I3AaNwlRD5m4BRgGhVGopAyIcbOrgUO7dL\/CmCbV1lBoG8xr8JGIWLhYxvAkYBolVpKAIhH27o4FLo3C7xpwCydZFZBPIa\/yZgFC4XMr4JGAWIVqWhCIR8uKGDy3jnIew08V\/kb\/Bk3LyFGF7Ih5sVBBMwCsuFjK8hMLvEqwDaqiSGQMiHE+s4Bw2HsNPEvwmYHDhCE08h5MPNOjUTMArLhYyvITATMAqgrUpiCIR8OLGOc9BwCDtN\/JuAyYEjNPEUQj7crFMzAaOwXMj4GgIzAaMA2qokhkDIhxPrOAcNh7DTxL8JmBw4QhNPIeTDzTo1EzAKy4WMryEwEzAKoK1KYgiEfDixjnPQcAg7TfybgMmBIzTxFEI+3KxTMwGjsFzI+BoCMwGjANqqJIZAyIcT6zgHDYew08S\/CZgcOEITTyHkw806NRMwCsuFjK8hMBMwCqCtSmIIhHw4sY5z0HAIO038m4DJgSM08RRCPtysUzMBo7BcyPgaAjMBowDaqiSGQMiHE+s4Bw2HsNPEvwmYHDhCE08h5MPNOjUTMArLhYyvITATMAqgrUpiCIR8OLGOc9BwCDtN\/JuAyYEjNPEUQj7crFMzAaOwXMj4GgIzAaMA2qokhkDIhxPrOAcNh7DTxL8JmBw4QhNPIeTDzTo1EzAKy4WMryEwEzAKoK1KYgiEfDixjnPQcAg7TfybgMmBIzTxFEI+3KxTMwGjsFzI+BoCMwGjANqqJIZAyIcT6zgHDYew08S\/CZgcOEITTyHkw806NRMwCsuFjK8hMBMwCqCtSmIIhHw4sY5z0HAIO038m4DJgSM08RRCPtysUzMBo7BcyPgaAjMBowDaqiSGQMiHE+s4Bw2HsNPEvwmYHDhCE08h5MPNOjUTMArLhYyvITATMAqgrUpiCIR8OLGOc9BwCDtN\/JuAyYEjNPEUQj7crFMzAaOwXMj4GgIzAaMA2qokhkDIhxPrOAcNh7DTxL8JmBw4QhNPIeTDzTo1EzAKy4WMryEwEzAKoK1KYgiEfDixjnPQcAg7TfybgMmBIzTxFEI+3KxTMwGjsFzI+BoCMwGjANqqJIZAyIcT6zgHDYew08S\/CZgcOEITTyHkw806NRMwCsuFjK8hMBMwCqCtSmIIhHw4sY5z0HAIO038m4DJgSM08RRCPtysUzMBIyLvvvuuDBo0SObPny\/t27eXMWPGSOfOnVtsGjK+hsBMwDRriORj3CEfzscsa5tFGvFvAqY229hT9UEgr\/FvAkZEhg8fLm3atJGhQ4fK9OnTZcKECTJ58mQTMPWJHWulDggcffTR8vjjj1dsqXfv3jJx4sSKP88rgdUB2lTi3wRMPSxlbdSKQF7j3wSMiPTq1UsmTZoknTp1kuXLl0vPnj1l5syZ0qFDB+cvIeNbBqbWsLLntAhofKzaIhnyYe048lgvjfgP4RYSoKHn7efxEQhtCmgxK3YJjTU0zrzGf+EFzNKlS91x0dy5c10WhtK3b18ZOXKk9OjRI1cCZty4cTJw4MD4kd6AJ5plrGmN0wRMMk5o8Z8Mrq1tNY24CsUUc7h7cB+ptjFIY5x+E13tGkJonCZgWuuRGX1+yZIl0qVLl5UETJ8+fWTUqFHSvXt3N+qQ+s3o1GxYhkALAqEdWlGhsvgvquWLNe+8xn\/hMzC4cSiFXCxXt9kaAsVCwOK\/WPa22eYHARMwIjJs2DBp27ZtyyXe8ePHy5QpU\/JjZZuJIWAIVETA4t+cwxBoTgRMwHz6GjV3Q\/xr1KNHj5auXbs2p0Vt1IaAIRALAV6jtviPBZlVNgQygYAJmFaYgSzNlVdeKStWrJB+\/frJueee24rW6vMoY7nkkkvcW1RrrLGGDBkyRPbff\/9VGn\/99ddljz32kI033tj9jAzUww8\/XJ9B1NjKBx98IKeddpo899xz7s2vu+66q8aW6vvY7NmzZcSIETJnzhwZMGCADB48uGwHWcS0vkhYa1EEshj\/fnzEPRyw9tpru38irvr37+\/+\/\/nnn5cEikuCAAAgAElEQVRzzjlH3n\/\/fdl2223dd6\/WXXfd1Ix7wQUXyIMPPihvvvmmiym4x5dKmIa+1ZPU4CuNtVqsN2qsSWGQ5XZNwNRonbffftsJg6lTpzoRcMghhzixsPvuu9fYYn0eg7Q4AuObIG+88YYceuihjizWW2+9lTogAI877jh54IEH6tNxHVpZvHixIBYWLVok1157bWYEzIIFC2ThwoVy7733yrJly6oKmKxhWgezWBNlEMhq\/EcFzK677ioHHnjgKqPnLcuzzz5b9t57b7noootk\/fXXd39PqzzxxBOy5ZZbys4777ySgKmGaehbXUmNvdJYq\/Fno8aaFAZZbtcETI3WQSA89dRTLgND4eN38+bNk8svv7zGFuvz2JlnnikQ15FHHukaPOmkk9xr4QcffHDmBYwfIB9su+KKKzIjYPy4xo4dK4isahkYEzD18eOst5LV+A8JmJdfflmOPfZYefTRR11VMiCnn3662+SkXciyRjMw1TBt9EXr0rFWEzCNHmvadmxkfyZgakSfezIc1\/idC5mPW2+9VW688cYaW6zPY0cccYScccYZLZkgdgObbbaZnHrqqasImL322ks233xzWWeddVw25phjjqnPIFrZSjMLmKxi2kqT2OMlCGQ1\/qMC5qGHHpI111xTtttuO7nwwgulY8eO8sgjj7gjI\/+lcY6RyIS88MILqdu4VBRUwpSMcuhbXUkPvpyAKRfrmu8KJT3WIrVvAqZGaxNslLPOOsv9d8aMGXL77bfLDTfcUGOL9Xns8MMPdxcSd9ttN9cgb1hsscUWcsopp6zUAZkEjkX4Gbsyzscvu+yyhh+BMchmFTBZxrQ+3mWteASyGv9+fBx7snGhcBw7a9YsJ1oQMHx87Y477nA\/477GLrvskhkBU45Tr7\/++uC3upL2zFIBUynW+d5K6LtiSY+1SO2bgKnR2llNIWuPkEqnzZeHOQsne9Po0qwCJsuYNtqmees\/q\/FfDmfulPHrUfja+CuvvOIyrY899pirakdIOs8sFTDVYt2OkHSY1qOWCZgaUfQXzu6++27ZaKON3GVZ7kY0+hIvmSDu4\/hLvFwu5nwbcfLss8+6y7wEIzu0DTbYwL19wNsAkNp5550n++yzT42I1O+xZhIwzYJp\/axjLYFAVuPfW+fFF1+Urbfe2h1zwwe8bDBt2jT3Y740zltI\/hIvHNCINyhLRUE1TBv9rZ7SsVbjz0aPtUgRagKmFda+8847hYud\/ALIgw46yL2F1OgCYfHKL2\/MrL766k6U+Neoua+z1VZbufsw3Nm59NJLhU+p8xojvy6h9JipEXPZd9993dEWu8YNN9xQTj75ZPfqciMLl7M5Yvvoo4\/cMNq1ayfXXXeddOvWzd2ByjqmjcQuz31nMf493lzUJeMCB3CkcfHFF7uNCwXRzWaLzxZss8027kUENjhpFXiS+zlvvfWWO+baaaed5Oqrr3bdV8K0Ud\/qqTTWavzZqLGmZb8s9WMCJkvWsLEYAoaAIWAIGAKGgAoBEzAqmKySIWAIGAKGgCFgCGQJARMwWbKGjcUQMAQMAUPAEDAEVAiYgFHBZJUMAUPAEDAEDAFDIEsImIDJkjVsLIaAIWAIGAKGgCGgQsAEjAomq2QIGAKGgCFgCBgCWULABEyWrGFjMQQMAUPAEDAEDAEVAiZgVDBZJUPAEDAEDAFDwBDIEgImYLJkDRuLIWAIGAKGgCFgCKgQMAGjgskqGQKGgCFgCBgChkCWEDABkyVr2FgMAUPAEDAEDAFDQIWACRgVTFbJEDAEDAFDwBAwBLKEgAmYLFnDxmIIGAKGgCFgCBgCKgRMwKhgskqGgCFgCBgChoAhkCUETMBkyRo2FkPAEDAEDAFDwBBQIWACRgWTVTIEDAFDwBAwBAyBLCFgAiaGNSZMmCCXXnrpKk+cd955cuKJJ0rpz9dbbz350pe+JIMGDZI99thjpeeOPvpoefzxx92\/TZ48WXr06NHy85NOOknuv\/9+9\/cVK1bIpptuKr169ZJhw4a5\/\/eFn\/HvF110kRx44IFVZ\/LII49I\/\/79V6lz3333yVZbbaVCgf7GjRsnt956q7z\/\/vvStWtX13d07NGGli5dKp07d16l7UsuuUSOOeYY9+9nn322w+H11193f\/\/zn\/\/cMsfZs2fL4MGD5V\/\/+pfsuOOOMmbMmJafHX\/88dKlSxcZOnRoxbEz3p\/\/\/Ody2223yVtvvSXYg7n+4Ac\/kN12203+\/ve\/ywEHHOCeX2ONNeQzn\/mMbLnllvKtb31Lvv\/978taa62lwsXbKQ420YZPPvlkwQ7R+Yeway026olZxSACUT+KVt5rr71k\/PjxK\/kZP2\/btq189rOfFTgAP4uWq6++2vk55ZxzzpFTTz215cel\/LLuuuu6GBwyZMgqMYiPb7DBBjJy5Mjg+KvFIA\/PmTNHhg8fLvjc+uuvL9\/+9rfl3HPPlTXXXDPYNhXw5R\/\/+Mcyffp0eeedd1wbX\/va1+Tiiy+WDTfcsGob0TkTX\/Acbfzwhz+Up556Sj73uc+5tj0HEe\/33nuv3HXXXbLaaqtVbPv3v\/+947KXXnrJxfnnP\/95OeSQQ+R73\/uee6Zbt27y4Ycfuv9v166dbLbZZrL77rvLaaed5v4\/blm0aJHjFXgOjnnggQdcEyFehruuvPJK+eSTT9zcWX+Y1wcffCD77LOPXHbZZe6\/RS0mYGJY3gcTxMHi6QvCAOfyP99kk01k3333dcT17LPPOsJ65pln3AJJefvtt6V3795OnFC++93vOiHgixcwnTp1coHFsx999JHsv\/\/+AsH58vzzz0u\/fv1cIIeIwAcKwUPQ+zJq1ChHppry61\/\/WhAfiKivfvWrLggRBX\/84x8dWZYWvwgztu22267lx4iPvffe2\/39G9\/4hhN5Dz74oMMjKmAOPfRQWWeddWT06NHyzW9+U4466ignaBB3iEb6hwwrldtvv93VW3vttaVnz54CicydO1d+9KMfOcEZXXh22GEHeeONN1qE1M477yy\/+c1v1CQdFxs\/5ilTpjgRx9whJj\/\/EHatxUZjb6ujQ6DUj\/xT+BTiIvrz73znOy7+EazYe+LEiY4LfIE3\/vGPf7i\/fuUrX5F77rmn5WeeX\/B5Fux58+Y5n914443lySefbKm3bNkyoe+f\/vSnqsWtWgwuXrxYvv71r7sxs4Cz4C9YsEBOP\/10Oeuss1QA+dj44he\/6HjxoYcekvnz58txxx3nhFGl8vLLL0ufPn2E+fDHCxjmdfPNN8vMmTOdkEJoIFjefPNN2W+\/\/eTGG2+suKmiL+aAmCDGunfvLm3atHGYI1oQnBQvYNiA0fcrr7zi\/gv3EbMdO3ZUzd1Xwg\/YqNJGOQFTjpfhTXgWrNmoHnvssQKWbIbhYebB34tcTMDEsL4nEJwJZVxaSn\/OgokDUlhscVKKD2gI6oUXXnAExMK1+uqru597AXPmmWe67M2dd97pApWF3mdmqHfNNdfIH\/7wBxcYLIAsuPyBYBA\/LNRenXsBU7qr83NAaLGzigZX6fzYNUESZGBY4NnlQbCM7ZRTTlkFD78IQ3yQSrUCFv\/9739XEjCIM4jiqquuciQKmdEXJDVw4EC3Y6pWEAaQTTTjgxB87733XLvRhQUyoDz88MNywgknOKK54oor5PDDD3citN7Y0BdYIsxY1G644YaV5h\/CrrXYxHB7qxpAoJwfRR8p93M2PH\/729\/cjppMDIVMB5sU+ABxQ6aBbMLWW2\/tfl7KL8Q5sUWJCv+nn37atcl\/2Ww99thjTsy8+OKLbqPDRoB49Xzjx1ouBv0mAJGF2EI0sfjTLhsnshfbbLONyxBExxCd\/4gRI5x\/E79klPh\/4tLzWzl4ly9fLocddpj7ERmQRx99tEXAkHVAsDAvOI7YJbtDVoas0E9+8pOqFvN8Gt0Q0t8\/\/\/nPFo72AsYLTMQUG1UwhwvYVFFCc6cOHE1mB7689tprywqYcrzM+rH99tu7TBUZY8TfL3\/5S\/c8\/sOc\/ZpS1CA1ARPD8p5ACKgvf\/nLLU8SUKRyK2VgIIZp06a5YwoKAcCiSGqQXQWBw44CgUCJChicnmC57rrrHAEQAL4cccQRbmGnDgKB3Yx37jvuuMNlEyAKdmtewDD2JUuWuAWcYxyfMg0t0u+++67b1VEgXrJJpGshC4KJeZQWvwhDcggsiJkgJFghwGgpR56ICQjq448\/duOF+CAuxCDzqpYipu2xY8c68UOGiTEy\/l122cURIqXSwgMR3n333U4o\/eIXvwgKmFqwof8BAwa4HTR9QZhRARfCrrXYxHB7qxpAIOpH2NEX4otFuFIGhhhgEfrCF77gHkEwE+fENWXSpEkrZTqiAoZNBAsjYpu44hjW8wt8wXEPnIIoOuigg1wWkowHmRqEDRkBeCYUgxxbsymiH39c62PVb8pCizjzRzSxIPuCeCA+\/ZhLISbu4BQ2SCzgs2bNahEwiAhi57XXXnPZbdoBS7iMDV70mL2c6cAKgQcmcDG8gBCMPlcqYGiHTSsYkAH7y1\/+4poOzZ2jHjiP48QjjzxSyJyWy8BU4uWf\/exnjsMocD38z7Hjtttu67LRRS8mYGJ4QKU7MOxSdtppp1XuwPimISREDjueV1991aUA2SmwgyFIycjg3BznUKJ3YHwb3AHBeX2QkTblWITdBMFGpoWdyK9+9SuXFv3d737nAv\/ggw92QgkBw99xfDIQHPsgANiZkclgEYaQIAJ2WKWFFCuBiBBhN0LxognhBVmWFhZhfsbYISraZ6dGEJfuksoJGNqjP+YKabDYIyroi50pf8ADkkVAlhbIA7Hk75fwc+bHQoEYrCRgWADAmnGziCSBDT5z4YUXOiHG8Vrp\/DXYtQabGG5vVQMIVLoDg\/hmc1Hp58Tt9ddfLxw5U9hls+kghskIwAMcuyBUKOX4p0OHDs5Xo\/fQEOuIFo5JL7jgApc54e4GCzxZP+59bbHFFi6rES3lYvCMM85wIiuaLaEv7sB53ps6dao7jkGU+GPyaLsIl\/PPP99lgBjDLbfc4jYFPsNZCi9ZHsaPWCDrwZFzVMD4+sQ3R9jEAfURI9xPYWNF4eiFMZUrxDg4c0TmC1kpMryUcgKGjA\/HOBTmAqeF5o4PIBpnzJjhniknYKrxMn2BLZtOsOXujueNyy+\/XP7617+6sZLJq3acntcgNgETw7Jxj5A4N0aYcH7qz29R1IiGXXfd1e1s\/G6AQMTRyVZ4AQOhtG\/f3tVht8Cuy+\/wIBUc\/4knnnBCxJNP6XSoT9YCQoymjP3OClHCri9Uas0yRPsliCGV6A7G91tJwETHBZmyU9lzzz1dKho8OLOGlMlwVSoLFy50GCJGEG6QHH+vJGA4nqI9n4FJAht2w\/SP2KT4RQq\/4OgLu2mx4\/lasQnNzX4eRiDuERIZRRZKYpjjQy7akhXhuJI7X\/w\/tmeDwgJL\/OIP0QwvfsOizs\/hAX9BH87hiBtxz\/0N7tfh8+WKz6RWi0HPE3ASWRsK9\/9YUKPH4tVQQrwQq9zfQ1D4bLDnptJn\/UVmNnpwFmKHGGaTwjzh1GhBELEJvOmmm1ymgwwq+MG5f\/rTn2SjjTYqOzzswCaSefAsxc9Jm4EJeQfHf2TYONJHcGFbuJxMMGsB92+0vIyt2ahy9whM2JghgMmOgWu1FxpC42zWn5uAiWG5uAKGpgk4Atbvxtj5c5G0XOF8EwctvQPD0RDZjmjAQ4Aoc7IrFC7ikRlBifuUNP+OIILQ+Bm7OR8snpj8sRQChUUUcVHpVjvn4LzN43deiBFEiT+\/fe6559wug4wC5ImwIOPhj4u8gOEcnkCOlpCA4XwdXBgjwg\/CIo1LACMIy2HKjok5+wt31GG+EAiLTrmFh\/bpJ3oHJgls2Mkxvkp+AIZa7GrBJobbW9UAAnEFDM1xf43Y9dlLH4\/luuLIABFQyj9cYiWzguhBpLBQI3aIB59d8eIBf0OQ+8JxJUcS0TeJysWgPzbx4\/R3YNhwsXniCAexj6BhEeXvpYXjI+r6bC\/HPMSY5zOyTmwoyCbRj8emHBbRoyx+TiaIFwIQK3AdfSEMiV+yMhyl+6Nv3x5z+M9\/\/tOyeaAugoI7R14sau\/AhObOW4\/+ZY3S+ZA9QXBW4+XoMwg7RCsbMYQvL05w1EamDXHjRViRAtYETAxrawWMfwsp+rYBAmTzzTdvOZ6JigSOfvhDapfzzlIBg2iAbCAdf6mMS7SQE0FK8ReDuehLCpnLqpyDIzpQ7OyeEFKkf0npcoeC4ndFoTsw1PXzh2i4XEY6EyKjLUSJv6znBQ3HI+wOGSvpT940gjiibx9wwRYSoi6lb9++TmBwnMbuhMJuCmzYeZFO\/u1vf+suN0NU7GIQJoyltHjy5syZezDcB2AnV+71VggLnDmmooAbhADBJ4FN6VhLFw8Ndq3BJobbW9U6ChgWHo5R8VdilGML4hN\/+\/e\/\/+2Oov0bfcQFWVkyhohd7oCxQYm+REC88CKAP+Lhvwhfjqwp\/k1F4pTFnZgiXohDf+xbLQbZJME9jA2hwAaFY\/DoW0iheyC85sxCy7EVx9XELVlpsoZkS8ACHCpd9q90hMT84Bc2SrSPEKINeAhRwrwQcqWvPSM6yLIyHjZ7xD0bPO4SIQThKi9g4FMECOP1n7RA5Pg3N0Nzj7oOfFx6hBTiZf8893442mfzSJ9kWxB92BC7wmnV3ujKaxCbgIlhWa2A8U1CFrwGTRaGP\/5uBUTA+asv3rFZuMlMEFzsUqLnzn4xJkBxenY71PWvT7PIk5nAofluCoSFo7NDgxxpj+MWyA4CZVFnN+Pf5NEs0j4t678DQ\/ucsfsdTqmAgey4YMc4uXeDgENwcS\/A79R8VqfUDIgNX4c58Qfi49wZcgIDdqCQE2fBEH9pgfR5jp0Ouysw4Z4Bwc\/dmXLfgYGwIArO6v13YJLAJiRgNNjRRq3YxHB7q1pHAUNT+DB+S0YEP0akwA8IFxYl7\/cccRAf3AFj44K\/lgoYvxjzLLtz+AHxH73HxsaFb8vgUxRin3t5\/ltMoRgkFhEKxAHiiDfgGLffYIQWcbIDiBiOtYhDNngIL4Qbc61VwCDEEATwgP80BJsO\/6kJNjl+jlETwo8IHjKXiB7inLuBZLX9kW70OzBkuNi0cbwLd0Uv+4bmHhIwIV72z5d+1wfRxvywCWNm4xu6vJzHQC6MgEEksMASjNxgj97g5ogAZ+DbBNw5IdjLfYAtKw7AJTWCnp2AFUPAEAgjwFEIAp57COy0ObIhM0hptvivNFs4jiwl340qfcsvjJDVMASaD4HCCBhScBwfsAtgBx8VMKTe2E2wM2eXT6aFb6tktbDrgqBIG1oxBAyBMAIcX3LsyS6VTAUbFjIf3AlrtvivJmC4mOvflAmjYjUMgeZGoDACxpuJIw1SmlEBw5kyF6O4Ke5v\/5OWJG1oxRAwBPKFAHfJuCTtMxUW\/\/myr82mOAgUXsD4D4ZxnurPdDmf5dXGSr\/jpzjuYTM1BPKHAK\/dksXkWMniP3\/2tRkVB4HCCxhe\/+O7BlEBw6u2XITzF7qK4w42U0Mg3whwsZsL8Vx+5vV6i\/9829tml28ECi9gMG8ohRz9zdH5dgebXV4R8L\/LJq\/z08yLOy+8+cLryLxt5ovFvwY9q9PMCOQ1\/k3A\/P\/P1fNGAq\/z+Uu8vK3gv0uC00J2\/pf9lXNiPqLEq89WxH1QyrD4X0\/IEhYhH8677\/K6Kd8u4cOHpb92oojxnyXf1Phes43X4l9j1dbXKYyA4euLfGuBj0dR+CQ9n9DnfX9eo2TR9a9R872WKMkVnfxb72bWQqMRKLoPE\/t8Nj76+2K4A8PFfYv\/Rnun9Z80AnmN\/8IImNY4SF6N3xpM7NnmQsB8uHZ7GXa1Y2dPZgOBvPqwCRiFf+XV+IqpW5WcIGA+XLshDbvasbMns4FAXn3YBIzCv\/JqfMXUrUpOEDAfrt2Qhl3t2NmT2UAgrz5sAkbhX81u\/Hq\/RZXXG+0KV2jaKs3uw40E3rBrJPrWdz0QyKsPm4BReEezG5\/x97tihmKmuip3D+5T9a0sXStWK00Emt2H08SqtC\/DrpHoW9\/1QCCvPmwCRuEdzW58EzAKI+e8SrP7cCPNY9g1En3rux4I5NWHTcAovKPZjW8CRmHknFdpdh9upHkMu0aib33XA4G8+rAJGIV3NLvxTcAojJzzKs3uw400j2HXSPSt73ogkFcfNgGj8I5mN74JGIWRc16l2X24keYx7BqJvvVdDwTy6sMmYBTeETJ+vd\/yUQwpdhW7xBsbslw9EPLhXE22zpMJYaeJf3tzr85GseZiIRDy4ViNZaiyCRiFMULGTyLDUW\/BUe\/2qv1uKAWkViVlBEI+nPJwmqq7EHaa+Lc395rK5LkbbMiHm3XCJmAUlgsZX0Ngim5aqkB29RYc9W7PBEwciza+bsiHGz\/C7I4ghJ0m\/k3AZNe+RRhZyIebFQMTMArLhYyvITBFNyZg4oBkdWMhEPLhWI0VrHIIO038m4ApmNNkbLohH87YcNXDMQGjgCpkfA2BKboxARMHJKsbC4GQD8dqrGCVQ9hp4t8ETMGcJmPTDflwxoarHo4JGAVUIeNrCEzRjQmYOCBZ3VgIhHw4VmMFqxzCThP\/JmAK5jQZm27IhzM2XPVwTMAooAoZX0Ngim5MwMQByerGQiDkw7EaK1jlEHaa+DcBUzCnydh0Qz6cseGqh2MCRgFVyPgaAlN0YwImDkhWNxYCIR+O1VjBKoew08S\/CZiCOU3Gphvy4YwNVz0cEzAKqELG1xCYohsTMHFAsrqxEAj5cKzGClY5hJ0m\/k3AFMxpMjbdkA9nbLjq4ZiAUUAVMr6GwBTdmICJA5LVjYVAyIdjNVawyiHsNPFvAqZgTpOx6YZ8OGPDVQ\/HBIwCqpDxNQSm6MYETByQrG4sBEI+HKuxglUOYaeJfxMwBXOajE035MMZG656OCZgFFCFjK8hMEU3JmDigGR1YyEQ8uFYjRWscgg7TfybgCmY02RsuiEfzthw1cMxAaOAKmR8DYEpujEBEwckqxsLgZAPx2qsYJVD2Gni3wRMwZwmY9MN+XDGhqsejgkYBVQh42sITNGNCZg4IFndWAiEfDhWYwWrHMJOE\/8mYArmNBmbbsiHMzZc9XBMwIjIkCFDZObMmbL22ms74E477TTp379\/C4gh42sITG0REbHfhRQHLaurQSDkw5o2mrnO7NmzZcSIETJnzhwZMGCADB48uGU67777rgwaNEjmz58v7du3lzFjxkjnzp3rGv8mYJrZe5p\/7HmNfxMwnwqYXXfdVQ488MCynhoyvgmY5g\/wvM8g5MN5n\/+CBQtk4cKFcu+998qyZctWEjDDhw+XNm3ayNChQ2X69OkyYcIEmTx5sgmYvDtFgeaX1\/g3AWMCJnYY224yNmQNfyCvBBYX2LFjx8rixYtXEjC9evWSSZMmSadOnWT58uXSs2dPl5Ht0KGDaz6EnWYDYzET11JWv54IhHy4nn2l2ZYJmE8FzEMPPSRrrrmmbLfddnLhhRdKx44d67oDi2NUO0KKg5bV1SCQVwLTzD1ap1TALF261B0XzZ0712VhKH379pWRI0dKjx49TMDEBdjqZxKBvMa\/CRgRIb282WabOce79tprZdasWXVPIcfxahMwcdCyuhoE8kpgmrlXEzBLliyRLl26rCRg+vTpI6NGjZLu3bubgIkLsNXPJAJ5jX8TMCXutmjRIpdCZke22mqrtRDYwIEDhT\/liiaFHMerTcDEQcvqhhAYN26c8Oell14KVc39z2s9Qmpt\/NsRUu5dK7MTzHP8m4ARkRdffFG23nprWbFihbvAN3XqVJk2bVqLQ4bUqwmYzMauDexTBEI+XBSgygmYYcOGSdu2bVsu8Y4fP16mTJlS1\/g3AVMUD8vmPPMa\/yZgROTYY491GZfVV1\/dpZMvvvhid3HPl5DxTcBkM2htVP+HQMiH847VvHnz3KcRPvroIzfVdu3ayXXXXSfdunUTXqMmw+Jfox49erR07dq1rvFvAibvHpbt+eU1\/k3AKPwuZHwTMAoQrUpDEQj5cEMHl\/HOQ9hp4t8ETMaNnPPhhXy4WadvAkZhuZDxNQSm6Kalit2BiYOW1dUgEPJhTRtFrRPCThP\/JmCK6j3ZmHfIh7MxyvijMAGjwCxkfA2BKboxARMHJKsbC4GQD8dqrGCVQ9hp4t8ETMGcJmPTDflwxoarHo4JGAVUIeNrCEzRjQmYOCBZ3VgIhHw4VmMFqxzCThP\/JmAK5jQZm27IhzM2XPVwTMAooAoZX0Ngim5MwMQByerGQiDkw7EaK1jlEHaa+DcBUzCnydh0Qz6cseGqh2MCRgFVyPgaAlN0YwImDkhWNxYCIR+O1VjBKoew08S\/CZiCOU3Gphvy4YwNVz0cEzAKqELG1xCYohsTMHFAsrqxEAj5cKzGClY5hJ0m\/k3AFMxpMjbdkA9nbLjq4ZiAUUAVMr6GwBTdmICJA5LVjYVAyIdjNVawyiHsNPFvAqZgTpOx6YZ8OGPDVQ\/HBIwCqpDxNQSm6MYETByQrG4sBEI+HKuxglUOYaeJfxMwBXOajE035MMZG656OCZgFFCFjK8hMEU3JmDigGR1YyEQ8uFYjRWscgg7TfybgCmY02RsuiEfzthw1cMxAaOAKmR8DYEpujEBEwckqxsLgZAPx2qsYJVD2GniHwETKr1795aJEyeGqtnPDYHYCIR8OHaDGXnABIzCECHjawhM0Y0JmDggWd1YCIR8OFZjBascwk4T\/5qva1uWpmCOleJ0Qz6c4lDq2pUJGAWcIeNrCEzRjQmYOCBZ3VgIhHw4VmMFqxzCThP\/JmAK5jQZm27IhzM2XPVwTMAooAoZX0Ngim5MwMQByerGQiDkw7EaK1jlEHaa+DcBUzCnydh0Qz6cseGqh2MCRgFVyDWvkqwAACAASURBVPgaAlN0YwImDkhWNxYCIR+O1VjBKoew08S\/CZiCOU3Gphvy4YwNVz0cEzAKqELG1xCYohsTMHFAsrqxEAj5cKzGClY5hJ0m\/k3AFMxpMjbdkA9nbLjq4ZiAUUAVMr6GwBTdmICJA5LVjYVAyIdjNVawyiHsNPFvAqZgTpOx6YZ8OGPDVQ\/HBIwCqpDxNQSm6MYETByQrG4sBEI+HKuxglUOYaeJfxMwBXOajE035MMZG656OCZgFFCFjK8hMEU3JmDigGR1YyEQ8uFYjRWscgg7TfybgCmY02RsuiEfzthw1cMxAaOAKmR8DYEpujEBEwckqxsLgZAPx2qsYJVD2Gni3wRMwZwmY9MN+XDGhqsejgkYBVQh42sITNGNCZg4IFndWAiEfDhWYwWrHMJOE\/8mYArmNBmbbsiHMzZc9XBMwCigChlfQ2CKbkzAxAHJ6sZCIOTDsRorWOUQdpr4NwFTMKfJ2HRDPpyx4aqHYwJGAVXI+BoCU3RjAiYOSIG6Rx99tDz++ON1a7Hev6cm7fGFfLhuQOWwoRB2mvg3AZNDx0hpShquCPFTyIdTmkrduzEBo4A0ZHwNgSm6MQETB6RA3SRs8tJLL9VthGmPL+TDdZtYDhsKYaexpQmYHDpGSlPS+lc1fgr5cEpTqXs3JmBE5N1335VBgwbJ\/PnzpX379jJmzBjp3LlzC9gh42scLI7lNGTX6PbquZjHmYu2bhI2qeec0x5fyIe1uOaxXhrxr4lp+2WOefSu1s9JwxUh38lr\/JuAEZHhw4dLmzZtZOjQoTJ9+nSZMGGCTJ482QRMhdgLBUvrQ7b1LWiCPk4v9Z5z2uPLK4HFsWGlumnEv1bA1GM+mjZCRw6aNqxOOghouCLET3mNfxMwItKrVy+ZNGmSdOrUSZYvXy49e\/aUmTNnSocOHZyHhoyvcbA4rq4hu0a3V89sRJy5aOsmYZN6zjnt8YV8WItrHuulEf+amE67Tj39OY9+kZU5abjCBExWrJXyOJYuXeqOi+bOneuyMJS+ffvKyJEjpUePHiZgytijWrCMGzdOBg4cmLIVV+1OE\/RxBhkiiHJtVcMi7fGZgClv7bTiP21x0u+KGVXduxZ\/jhMv9a6bFV6JM696jVnDFSF75jX+C5+BWbJkiXTp0mUlAdOnTx8ZNWqUdO\/e3fmr5hZ4HMe2uoZA2gjYkUF5xC3+0\/ZE668RCOQ1\/gsvYHCmUAq5EQ5nfRoChkA6CFj8p4Oz9WII1BsBEzAiMmzYMGnbtm3LJd7x48fLlClT6o21tWcIGAIZRMDiP4NGsSEZAgoETMB8+ho19zb8a9SjR4+Wrl27KuCzKoaAIdDsCPAatcV\/s1vRxl9EBEzAtMLqZGmuvPJKWbFihfTr10\/OPffcVrTW3I9+8MEHctppp8lzzz3n3tq66667mntCrRj9k08+KZdffrm89tprLrN38sknyzHHHNOKFu3RLCLQDPE\/ZMgQ90bl2muv7SAkRvv37+\/+\/\/nnn5dzzjlH3n\/\/fdl2223d96\/WXXfdhkB9wQUXyIMPPihvvvmmzJkzx8WNL5VwDn2\/J+mJVBrz66+\/LnvssYdsvPHGbgjM5eGHH3b\/3+gxJ41J2u2bgKkR8bffflv2339\/mTp1qnPUQw45RCCL3XffvcYWm\/uxxYsXy+zZs2XRokVy7bXXFlrAPPvss7LWWmu5LB5kdvDBB8uNN95oWb3mdvGVRt8s8Q8n7brrrnLggQeugj5vW5599tmy9957y0UXXSTrr7+++3sjyhNPPCFbbrml7LzzzisJmGo4h77fk\/Q8Ko2ZmD\/uuOPkgQceWGUIjR5z0pik3b4JmBoRnzhxojz11FMuA0Ph43fz5s1zO+8iF37\/0BVXXFFoAVNq\/yOPPFJOPPFE2WeffYrsGrmae7PEfyUB8\/LLL8uxxx4rjz76qLMLWY\/TTz\/dZUEaWcjeRjMw1XDOyuXr0jFXEzBZGXMjbVzPvk3A1Igm92Q4OvI7FtK0t956q9tpF7mYgFnZ+pDx8ccfL\/fdd59ssMEGRXaNXM29WeIfAfPQQw\/JmmuuKdttt51ceOGF0rFjR3nkkUfckZH\/4jjHSGQ\/XnjhhYbaqVQMVMKZFy1C3+9KayLlBMxee+0lm2++uayzzjouG8MRsuabQ2mNOS\/9mICp0ZIEFuWss85y\/50xY4bcfvvtcsMNN9TYYj4eMwHzf3Z844033C734osvLuzRYj68etVZNEv8L1iwQDbbbDM3AY52Z82a5UQLAoYPrd1xxx3uZ9zN2GWXXTIpYMrx7PXXXx\/8fldavlcqYDhOX7hwoWyxxRZCpos7R5dddpnwLZbQN8fSGnNe+jEBU6MlmyWFXOP0an7MBMz\/QsfZPbsu3m7hrpSVfCHQjPHP\/TR+TQpfHX\/llVecfz722GPOMHaEVLt\/lgqY0pb4qjv3i8444wz75ljtMJd90gRMjYD6y2V33323bLTRRnLooYfK4MGDC7\/TNgHzv7tZFocTTjjBXe62kj8EmiX+X3zxRdl6663dcTf39HjpYNq0ac4gfHGct5D8JV7eQGr0m5SlYqAazln5fk\/pmMl6cVwMnrxVBRecd9557g5cVsacl4g0AdMKS955550yduxY9wsgDzroIPcWUpHLvvvu61Kn7PQ23HBD9\/rwgAEDCgfJNddc49Lz\/jVKAGBhMDGTL1dohvjnCJOMy+qrr+6OLzjOZMGl8LYcmy4+gbDNNtu4FxLIFDSi+Ls6b731ljvy2mmnneTqq692Q6mEc6O\/31NpzNyHvPTSS4VfU8Er1PwqmlNOOcXNpdFjboRtk+zTBEyS6FrbhoAhYAgYAoaAIZAIAiZgEoHVGjUEDAFDwBAwBAyBJBEwAZMkuta2IWAIGAKGgCFgCCSCgAmYRGC1Rg0BQ8AQMAQMAUMgSQRMwCSJrrVtCBgChoAhYAgYAokgYAImEVitUUPAEDAEDAFDwBBIEgETMEmia20bAoaAIWAIGAKGQCIImIBJBFZr1BAwBAwBQ8AQMASSRMAETJLoWtuGgCFgCBgChoAhkAgCJmASgdUaNQQMAUPAEDAEDIEkETABkyS61rYhYAgYAoaAIWAIJIKACZhEYLVGDQFDwBAwBAwBQyBJBEzAJImutW0IGAKGgCFgCBgCiSBgAiYRWK1RQ8AQMAQMAUPAEEgSARMwSaJrbRsChoAhYAgYAoZAIgiYgEkEVmvUEDAEDAFDwBAwBJJEwARMkuha24aAIWAIGAKGgCGQCAImYBKAtVu3bvLhhx+u1PLaa68tf\/\/7392\/XX311TJmzBj3\/+ecc46ceuqpLXVXrFghP\/\/5z+W2226Tt956S9Zbbz3Zaqut5Ac\/+IHstttuUq5t\/\/DnP\/959+wBBxzQ0t5aa60lX\/jCF+Skk06Sww47bKUx3XzzzfLrX\/9aHnjggSAKhx9+uDz99NMr1dt\/\/\/3dXLTl7LPPlscff1xef\/1198if\/\/xn2XTTTVsenz59ulx77bXy0ksvySabbCLf\/\/73ZcCAAe7ns2fPlsGDB8u\/\/vUv2XHHHR1+\/tnjjz9eunTpIkOHDq04lBCuPBjFtl27drLZZpvJ7rvvLqeddpr7\/ziF8V5xxRXyl7\/8RdZcc03Zeuut5brrrnPtYKNp06bJa6+9Jquttppss802MmTIENc\/47zgggvcz\/GZH\/3oR3LUUUe1YMBc77\/\/\/tjjiTP2LNYldqJ+7ce41157yfjx41sVVxtttFHZtn0fRxxxhPTv318dV8TqBhtsICNHjgxCGYqJOXPmyPDhw53\/r7\/++vLtb39bzj33XOdTmrJ06VK55ppr5M4775R33nnHccn5558vX\/va16o+Tv1f\/vKX8s9\/\/lM+85nPOO6hnXqWanP7xz\/+4eLnr3\/9q7z33nuOD5j7oEGDZI011nBz+eEPfyhPPfWUfO5zn5Mf\/\/jH0qNHDzc84uvee++Vu+66y8VXuZImH3zlK1+R\/\/73v6sM45JLLpFjjjlmlX9\/\/\/335ZRTTpEXX3zRrSMbb7yx7L333s5u2KKeZcaMGTJ69Gh59dVX5bOf\/aycfvrpLesEPPOrX\/3KjeOjjz6SLbfc0q1VBx10kBsCa9SVV14pn3zyiRx44IFy6aWXOrw\/+OAD2WeffeSyyy5z\/02ymIBJAF2\/EHbu3NkJEAqOd9NNN7n\/33fffYUApeDc99xzT8sobr\/9djnvvPPc4tWzZ09ZtGiRzJ071y1kJ554orCA\/ec\/\/3EB8dxzz7nnunfv7oK6Q4cOzsE80UPub7zxhrzwwguu3syZM4Ux+UJ7iJsLL7wwiIIXMCzovvTu3Xsl8RVq5Bvf+IZ86UtfkgcffNAt1FEB89hjj7lghqhYsO+77z6ZN2+eI82+ffvKoYceKuuss44Ltm9+85uuDoKGIAMvRBgEX6mEcOW5qN2WLVsmr7zyivBfhNKUKVOkY8eOoSm6n7PYQrYsHn369HEExL9BspAA84GY6A+CRshsuOGG8vDDD7uFChsjLp988kk3f\/6NudMmohExWrQSFTA77LBDy\/T5f8Rfa+IKkkUUUP797387u4N3165d3b+xeOyxxx6quMJfGNNPf\/pTFXlXi4nFixfL17\/+dXn77bedkEbYL1iwwC0yZ511lsoFiBc2Bdtuu63sueeejoNol3ip5M+33HKL44R1113X+erqq6\/u+IoYilvw1Z122slxV7SE5vb73\/9ezjjjDIclmwm\/yfIbPvAlRuA0bEc8IVjefPNN2W+\/\/eTGG29sETTlxpwmHzD3qIB55JFHHP8hEMst8Gzwjj32WLexWb58ueNLnkfUeD\/V2oH1o1+\/fnL55Zc7O0SLjyk2ufgGHEx9cEXgjhgxwvFer169nA8+++yzbtyIW8b21a9+1fkiP2e8bIaJE4QZvsrfky4mYBJA2C+EEydOFBb5aGHXwSLEooZaZSfBboEdOoUdGU4TVeeoX3YhUcJh0YPcKCyCkI1fPL2AwYlwOOpBfGRL6JtCQCCQ2K1AjmQ2UNDPPPOMIywcERLzogABg2DyYqgUNrIlf\/jDH2TcuHFOjVcrfkcSFTDDhg2T3\/zmN3LmmWe6XRbCBPLbfvvt5e6773ZByPyvuuoqNx+EAcEMWQ0cOFAOOeSQqn1qcC2128svv+x23mCHeGAxIIj5f4RIpczVySef7AQYBEBglxbmTdB7+++8887OTpMnT5Z3331XTjjhBGFnxO6SbAz2JTt1\/fXXO8Ju06ZNAl6b7SajAga\/Li31iivIGb9iwScL5ktp\/5Xiiizl0Ucf7bKVxCSLAostu1hEKsKbhYgYi5ZyMeEXWTgELkHQf+tb33Lt4hssPKG4Iz7mz5\/vnqcddsXsqvGxchlLRDf1Fi5c6HyQzGZpYZFj543IYLdN3Fx00UUtHBatjwCCS9hsREtobv\/zP\/\/jMPKcRxYKUQJX8V\/mgWABXzZ3+AQxQlaG7NRPfvKTzPBBdCD4BVxKtoMNCxvPUGEtQAxEM95av8I+bHC9uIj2BW5Tp051mCEWEbcXX3yx49cbbrjB8T0bTgQk\/k7\/8D8i8rjjjnPcTH2yc2zKEWTwIvyPLfj\/pIsJmAQQ9gshxvcZGNQqQUhalKME0tKUSZMmrbSjGjt2rFukcXAcgR3ILrvs4pwoWrQChsUXx8ORoxkYdgHsDDjigLTIaqD8GRfiBseGeLyKJuggTQQNCy9qHgL0Thoi0hBZe2JlR4II+tnPfuZ2jpA0QUOwE3Aff\/yxIzUCDAJDRCD4KqWKfb8aXMsJT9KkzJN5g5VGwGBrSB6y5Rl8ACHDwlVayJCx24Gs\/\/SnPwnHGRxZ\/fGPf3RVOY4gI0MWgIUQmxSxRAUEdvKFrB1Ho\/WKK62AqRRXiFwyZuxiEVWk28mmQvhk1FjAyBiVZtGqifqo2PD18HtiLxR3CH8WIrKU3\/nOd1zG9NFHH20RApWEID5LXzz7xS9+0Y3Z+x7+CZfsuuuuTugRi9RnA4O4YrdOhoXy3e9+VxDo\/picOOKP37BUm1t0bPQPVxJHbAzAn+NleLBt27ZCfNP39773Pbf5iR5Nl4uXNPkg2j9CgcW99OpA6RjJvHBMznESGzgyewhPxKXGr8CFQmYK\/if76zfTYANmbALJ7tMu\/ILfkunm52yyooXxIFLY1PmsOBzNWkVB9MDX+CM+USpYk+IsEzAJIFvungqLFKSGWkUo4DQ4BUQGQRD8FIQGzs0O3hcCE4LG4XzRCBhfFxGAeDryyCNbnkcwkBbm\/gABRWCRFcApKRAv43zooYfcMROZCEQCRzzcY2HhhUB9RgBBRPoWsuIuTrVSjqzJANEn86eg+L0oQQRAevwbAcn\/0z+7SzAlg8UfAg9i9Kn\/6Bg0uJYTMOx0fBaFXTTtsHhgE3bDpQWi8dk0jvSog9CCiEqzU2TWIFwWNsQZYsUXhBo7SbItEDZn1NTBjiwQ7Gy1xwgJuHjqTVa6A+Nxq1dcaQRMtbhi04Efszkge0bmgwUfOxMfZEe32GILJyKipVxM+MXOZyWpzz0PfIkMBpuIUNyRRcGviJ1oXBEjxH1poT1inUI8kIFBOMAhCAMWPmKcIzY4ir+zC\/\/d734no0aNchxT7r6c78fPRTM3\/wyZHsQ\/98fIikXFCfGIeGJ+4E521N8z43mOOHzWuRF8EO0T+7PQ+80KGblKhU1l9LgfbibrxcY25Felz5b24bNxtMkJgP87YoY1hqwQXBct3OdirSDOEKw+g0hfS5YscVcksBNZezaUHFmROcaHyOxXO95vDZmYgGkNehWerXSE5NOHBD\/\/j4DhGIfdCotcdGdJChehAHmwGyco+bsvGgEDmbIAc67Pghe9hMfiz8IMWf3iF79wCr1c8alHxuqdlgUUNQ9pQILlBEM1WMuRNfUJJu4DQUqcsbI7YwFnx1GacocAyUpxdsvu7tZbb3UBBklEU\/+l46iGqyYDo3EXUrbMwRM6uEM+Bx98sPuvnyvzI8g5cqq0Y+HYgOMxcIHEEYdkZLBdpTN0zRibrU61I6R6xpVGwFSKK+KCRQExzeJD9sFn0krx\/tvf\/rbShcxqGRg2Of6eD4KCBcNnYDR2ZGEig8mGgJhlcWEh8nfyom34ozj+jbsXnTp1cr4Gj+DP9F\/puNb7Mbt3RBYF8b3ddtu1PMMlYv74DExobgg1MqCIPo6YKx1LcG8HrmJO3P3jWATOYtPgM5vlsEqDD3y\/\/j4SWW5soCmMj80mosAf7YT8ioyf3wBzXxKRD1+SGaHwEgSZXp+BgTfBrFwGhg0Zl4dZh9iEc4xd7iIxaxjZczZVZKnpn7pwHAKy2gsWGhwq1TEB0xr0YgoYH7TlHiP1hqNAFGRk\/NmvV8XRt5h4XiNgOBcmi8JFQRzMixHSrxxv+OwKCz73SDiu4r++cJTEcQhCgUDyY0Jo+Hsb\/ljKv13Ev4cuu5Yja8gGgvVZFxbnSkQLQUJ8ZK0gNeZFloaA4ZgFzEqLBlfNHRjuqNAvO4pKN+y55\/DEE0+4rBm7UbJajIsUPjsZbIdwJB3LbgrbVyosHuy6IaEvf\/nL7q4BAobzZxaMaNYmAVfOTJPVBEw940ojYCrFFZsQ7OyzK8QzwhobsmGIxhWLUfRNonIx4Y8vffbW34Eh44B\/kf0IxR07ZN8P4oUFBf\/lThiZIcQQ8U8dMhhkBVng4AtED4IZXyUzgxhg40KMk4HkyCB6dEtmpPTOTKU7MJq5+bc18Xt2\/WQfyhXEEkcgjI9MEfHHxorFlzndcccdjtuiJU0+oF\/w5MgNHi3d9HFMR8YDoYfwZfMTzVj4+0KISURlHL+qdgcGkcfxlM9i+jsw\/p4RWWAyZohl7MjmC3zLFWw1a9YsJ3TgOd7CY2NMJpK5lxPL9SAXEzD1QLGkjXI7eYKJ4CcbQuoXA1MIPo4QyLAQVKTgID12GgQsOyKcPvq6aBwBQ11\/AY7dIcRByhDV7S+hcl+Dow7EDilg+uX1SX7O2Hidm\/Nvxs1OCAFBXUgX8iPlGDqLZxxcRmO+7CYoBAXCjJ0dl5QhHu77+AuEZF8IXv96JM8gdEjDM04W8t\/+9rfu0i+kgFBAvJDKLC0+6KvhGr27BNnzNgr\/hZhZnMBFcwfGX0Dm9U7uIDAHduf8FxuQiSHzwkKEEPEFQokSLel\/0q+0x64HIYqghBTY1ZDZKZceT8ClG95kJQFT77jSCphycQXZs7CzY6Y8\/\/zzzv7YGd\/Gn\/FPdsUcfYZiAvGB0IEzWKBZ5DhKjL6FFIo74pO+iFXGwy6bGMa3WCT9AufvmjEmfx8NX2XXzuLTvn17F1cce\/hL6mRx4ATGR6aJbAv\/Fi2VBAyLY7W5sVAjtiiMwfMlm7vS19M5wiLzyoIJL7EAMxZ8A85BUJZ+BiFNPmAO3q88B0cxYqwINH8vhhcrqM+8\/VtIvKrMPSq4XONXvv1qAoZ2yCbCwXALAoQjeuyNHb0f0Bai1V84Zq2IvpzAhph\/g9\/InJNtQVjjd\/g9axfjTqKYgEkA1XICxp8tE4gYl90ThUBG2OA4CAscFsOzwJHpgPxwJpwievarzcDQBw6GE0GIvOlCgJAlYefqC9kAMh68hcRY+Dn9Qg4QLs6MwIIgmAM\/Yxfnd0UhIqUf5okYKi2INLI97PQgaXaFLNSkI0vf4gIb\/iBYCChIivQ6mSBIqtzrgvTH2EO4Ru8ucczHHRZ2TWQ5PPYaAUN\/pLQhVOZLypwUrr\/D5N8MKcWB+n6nzq4FUuFoyb\/VhXDED2gTEQeRlx6tJeDOmWiykoCpd1zFETDRuGKXz4KLGI\/ejWJ8XMb0dwoQ0Bwh+O9\/VIsJOILYIAbxO8QRggh\/92+iheKODQj1GSvteS7xWdJyAgbfI97ZHMAZxAULvj8q5hkuwSJo4CiOI8ja4Kul2ddKAganqjY3fy+v1PlKPzuBIOTiKfHPhoHCAuy\/T8Xmpty3VtLmA+IVHyZrFb3LyHhLBQwZMo6b\/Gcc4FhwhIf8uhHyK42AoQ5H0\/47MPAd4tjflayU2eQIi0ywL6XfPUJMgjs+y3E6F31Dl6prJZnCCBh2HjgKQcPt9eidA78AokQppFb9RbZagc3qc4gD7t2wey\/qGy1ZtY2NKzkEqsU\/x4IQLq8bk2lAcEQvUGpGRfsQPxsA\/0kDzXNWxxAwBGpHoDAChh0IRxNcsGPXXipg2GmHvl9SO8zZeZKjDLIDpIHr\/VXH7MzSRmIIrIxAtfgnvU1Gg+wWO\/8JEya4TGWcgoDhYm657\/7EacfqGgKGgB6BwggYDwmpT1KkRRUwetewmoZA\/hAoF\/\/cS+DyIZck\/ZuBHEmQUrdiCBgC2UXABIyIOyPmjRxu4nMTnIu0oTdpsmtSG5khYAhUQqBUwPhvZnCXwt8r4b4B94uil8cNUUPAEMgeAiZgPr3k6m+pc8mK29hxU8jZM62NyBAwBEoRKBUw3Anj1d+ogOGSJZdxuYBoxRAwBLKLgAmYEtvwSjGXXCE0\/40DfrdJ9CNy2TWnjcwQKI+A\/306RcenliMki\/+ie03zzz+v8W8CRsS94sjn3\/nmBxf4+D1A0a+58juNyv0COe\/W\/LzfFTOCXn734D5V2wk2kHAFPgQV\/ZBdwt0l2nxe5lKveYR8OFFjZKjxcgKG10V5PdVf4uUbSf5bRQw9hF29bBSXT7SwGu9okapcr942bv2IVm4hNL6QD9d7PGm1VxgBw1cseTWaL01S+Losv1SRbxzw5gAZF76pQTqZ7y5g8CihFEHApOV01k\/6COSVwLRIVot\/XqNGuPvXqPkuRvTXY6SNnXZDpJ171gWMdh5Wr3YE0vbh2kca78nCCJh4sKxcO2R8LeEYkbTGCvZsaxAI+XBr2s77s2ljp+UTLe7GO1qk8lsvbR9OC0kTMAqkQ8bXEo4RiQJsq5IIAiEfTqTTnDSaNnZaPtHCa7yjRSq\/9dL24bSQNAGjQDpkfC3hGJEowLYqiSAQ8uFEOs1Jo2ljp+UTLbzGO1qk8lsvbR9OC0kTMAqkQ8bXEo4RiQJsq5IIAiEfTqTTnDSaNnZaPtHCa7yjRSq\/9dL24bSQNAGjQDpkfC3hGJEowLYqiSAQ8uFEOs1Jo2ljp+UTLbzGO1qk8lsvbR9OC0kTMAqkQ8bXEo4RiQJsq5IIAiEfTqTTnDSaNnZaPtHCa7yjRSq\/9dL24bSQNAGjQDpkfC3hGJEowLYqiSAQ8uFEOs1Jo2ljp+UTLbzGO1qk8lsvbR9OC0kTMAqkQ8bXEo4RiQJsq5IIAiEfTqTTnDSaNnZaPtHCa7yjRSq\/9dL24bSQNAGjQDpkfC3hGJEowLYqiSAQ8uFEOs1Jo2ljp+UTLbzGO1qk8lsvbR9OC0kTMAqkQ8bXEo4RiQJsq5IIAiEfTqTTnDSaNnZaPtHCa7yjRSq\/9dL24bSQNAGjQDpkfC3hGJEowLYqiSAQ8uFEOs1Jo2ljp+UTLbzGO1qk8lsvbR9OC0kTMAqkQ8bXEo4RiQJsq5IIAiEfTqTTnDSaNnZaPtHCa7yjRSq\/9dL24bSQNAGjQDpkfC3hGJEowLYqiSAQ8uFEOs1Jo2ljp+UTLbzGO1qk8lsvbR9OC8nCCJjZs2fLiBEjZM6cOTJgwAAZPHhwC8b8NtpBgwa1\/DbaMWPGSOfOnVt+HjK+lnCMSNJya+unFIGQDxtilRFIGzstn2htZryjRSq\/9dL24bSQLIyAWbBggSxcuFDuvfdeWbZs2UoCZvjw4dKmTRsZOnSoTJ8+XSZMmCCTJ082AZOWF1o\/iSOQVwJLHDgRSRs7EzBpWLVYfaTtw2mhWxgB4wEdO3asLF68eCUB06tXL5k0aZJ06tRJli9fLj179pSZM2dKhw4d3GMh42sJx3ZCabm19WMZmPr5QCj+69fT\/7ak5RNtv8Y7WqTyWy9tH04LycILmKVLl7rjorlz57osDKVv374ycuRI6dGjhwmYtDzRy60JVQAAEglJREFU+kkUgbwSWKKgfdp42tiZgEnDqsXqI20fTgvdwguYJUuWSJcuXVYSMH369JFRo0ZJ9+7dTcCk5YnWT6II5JXAEgXNBEwa8FofKSCQ1\/gvvIDBdzRHSAMHDhT+lCvaHZOlclOIVOtiFQTGjRsn\/HnppZcMnRoQSJv8tXyinYrxjhap\/NZL24fTQtIEjIgMGzZM2rZt23KJd\/z48TJlypQWG4SMryUcI5K03Nr6KUUg5MOGWGUE0sZOyydamxnvaJHKb720fTgtJAsjYObNmyf9+\/eXjz76yGHbrl07ue6666Rbt27Ca9RkV+bPny\/t27eX0aNHS9euXU3ApOWF1k\/iCOSVwBIHTnGJv95jMAFTb0StvbzGf2EETGtcOGR8LeHYTqg1VrBnW4NAyIdb03ben00bOy2faHE33tEild96aftwWkiagFEgHTK+lnCMSBRgW5VEEAj5cCKd5qTRtLHT8okWXninnqV3794yceLEejZpbSWMQNo+nPB0Wpo3AaNAOmR8LeGYgFGAbVUSQSDkw4l02iSNDhkyxH33ae2113YjPu2009xxsy9pY6flEy288E6\/K2ZoqwfrGY8FIcpchbR9OC0ATMAokA4ZX0s4FvgKsK1KIgiEfDiRTpukUQTMrrvuKgceeGDZEaeNnZZPtPCagNEild96aftwWkiagFEgHTK+lnBMwCjAtiqJIBDy4UQ6bZJGTcDEM5TxWDy8slA7r\/FvAkbhXSHjxxEwiu7Ezpg1KFmdOAiEfDhOW3mri4B56KGHZM0115TttttOLrzwQunYsWPLNNPGTssnWjtYBkaLVH7rpe3DaSFpAkaBdMj4WsLREontcBRGsSqxEAj5cKzGclaZX\/S62WabuVlde+21MmvWrFi\/zLXecGj5RNuvlnfitGcfRdSilY16eY1\/EzAK\/woZX0s4WiIxAaMwilWJhUDIh2M1luPKixYtcr\/Mld+Nttpqq7mZgl21L3HXGw4tn2j71fJOnPZMwGjRany9PH+J2wSMwr9C5K8lHC2RmIBRGMWqxEIg5MOxGstZ5RdffFG23nprWbFihUyYMEGmTp0q06ZNa5ll2thp+URrBi3vxGnPBIwWrWzUS9uH05q1CRgF0iHjawlHSyQmYBRGsSqxEAj5cKzGclb52GOPdRmX1Vdf3f1i14svvthlXXxJGzstn2jNoOWdOO2ZgNGilY16aftwWrM2AaNAOmR8LeFoicQEjMIoViUWAiEfjtVYwSqnjZ2WT7Rm0PJOnPZMwGjRyka9tH04rVmbgFEgHTK+lnC0RGICRmEUqxILgZAPx2qsYJXTxk7LJ1ozaHknTnsmYLRoZaNe2j6c1qxNwCiQDhlfSzhaIjEBozCKVYmFQMiHYzVWsMppY6flE60ZtLwTpz0TMFq0slEvbR9Oa9YmYESktZ8S1xKOlkhMwKTl\/sXpJ68EloYFQ9gdffTR8vjjj9d1KPX+9H+926vnZO27V\/VEs3xbIR9OfgTJ9GAC5lMB05pPiZuAScY5rdX6IZBXAqsfQpVbCmGnjX\/tWLUbnTy1ZxkdrTVrqxfy4dpabfxTJmBMwDTeC20EiSOQVwJLHLhPvwNTbYE1AdM6K1jGuXX4aZ7Oa\/ybgPlUwLTmU+JaAtPurCygNSFpdeIgkFcCi4NBrXVD2GnjX9u\/lify1J5lYLTWrK1eyIdra7XxT5mAEZHWfkpcS2BaYjIB0\/jAyNsI8kpgadgphJ02\/rVj1fJEntozAaO1Zm31Qj5cW6uNf8oETIkNavmUuJbAtMRkAqbxgZGnEeT5U+Jp2ClE\/tr4145VyxN5as8EjNaatdUL+XBtrTb+KRMwItLaT4lrCUxLTCZgGh8YeRtBXgksDTuFsNPGv3asWp7IU3smYLTWrK1eyIdra7XxT5mAEZHWfkpcS2BaYjIB0\/jAyNsI8kpgadgphJ02\/rVj1fJEntozAaO1Zm31Qj5cW6uNf8oEjMIGIeNrCUxLTCZgFEaxKrEQCPlwrMYKVjmEnTb+tbBpeSJP7ZmA0VqztnohH66t1cY\/ZQJGYYOQ8bUEpiUmEzAKo1iVWAiEfDhWYwWrHMJOG\/9a2LQ8kaf2TMBorVlbvZAP19Zq458yAaOwQcj4WgLTEpMJGIVRrEosBEI+HKuxglUOYaeNfy1sWp7IU3smYLTWrK1eyIdra7XxT5mAUdggZHwtgWmJyQSMwihWJRYCIR+O1VjBKoew08a\/FjYtT+SpPRMwWmvWVi\/kw7W12vinTMAobBAyvpbAtMRkAkZhFKsSC4GQD8dqrGCVQ9hp418Lm5Yn8tSeCRitNWurF\/Lh2lpt\/FMmYBQ2CBlfS2BaYjIBozCKVYmFQMiHYzVWsMoh7LTxr4VNyxN5as8EjNaatdUL+XBtrTb+KRMwChuEjK8lMC0xmYBRGMWqxEIg5MOxGitY5RB22vjXwqbliTy1ZwJGa83a6oV8uLZWG\/+UCRiFDULG1xKYlphMwCiMYlViIRDy4ViNFaxyCDtt\/Gth0\/JEntozAaO1Zm31Qj5cW6uNf8oEjMIGIeNrCUxLTCZgFEaxKrEQCPlwrMYKVjmEnTb+tbBpeSJP7ZmA0VqztnohH66t1cY\/ZQJGYYOQ8bUEpiUmEzAKo1iVWAiEfDhWYwWrHMJOG\/9a2LQ8kaf2TMBorVlbvZAP19Zq458yAaOwQcj4WgLTEpMJGIVRrEosBEI+HKuxglUOYaeNfy1sWp7IU3smYLTWrK1eyIdra7XxT5mAUdggZHwtgWmJyQSMwihWJRYCIR+O1VjBKoew08a\/FjYtT+SpPe1cGlWvd+\/eMnHixLp1f\/TRR8vjjz9et\/ZC4wv5cN0GknJDJmAUgIeMryUwLTGZgFEYxarEQiDkw7EaK1jlEHba+NfCpuUJa68yAklgWM8sURI+U218IR\/W+lLW6pmAEZF3331XBg0aJPPnz5f27dvLmDFjpHPnzi22Chlf64zaoKJePUtIndezr2hb2l1Go8aX1Lzr2W69MAz5cD3H3GxtpRX\/Wly0PGHtmYDxCIQ2vXmNfxMwIjJ8+HBp06aNDB06VKZPny4TJkyQyZMnN1TA9LtiRpCftEQXcu5gRzVWiCPs6rm7qXG4mXysXhjmlcDqYbS04l87Vm1cW3smYEzArFixQhsIea3Xq1cvmTRpknTq1EmWL18uPXv2lJkzZ0qHDh3clEPkH2eRqbcw0bbXCIEQB5dGjK8Z\/LleGIZ8uBmwSGqMacW\/dvwmYLRImYAxAVNwAbN06VJ3XDR37lyXhaH07dtXRo4cKT169CiUgBk3bpwMHDiw9ezxaQv1WnxrGVC951LLGOrxTL0wNAFT3hppxr\/WH0zAaJEyAWMCpuACZsmSJdKlS5eVBEyfPn1k1KhR0r17d+cf2nsIrQ87a8EQSAYBu2dUHleL\/2T8zVrNFgJ5jX+7AyMioRRytlzRRmMIGAL1RMDiv55oWluGQHoImIARkWHDhknbtm1bLvGOHz9epkyZkp4VrCdDwBBoGAIW\/w2D3jo2BFqFgAmYT1+j5u6Hf4169OjR0rVr11YBaw8bAoZAcyDAa9QW\/81hKxulIRBFwARMK\/yBLM2VV14pXCPq16+fnHvuua1oLflHL7jgAnnwwQflzTfflDlz5risky+V5hL6Rkbyo165h7fffttlyp577jlZY401ZM8995SLL7645QJ2s8zDz+qoo46SV199VZYtWybbb7+9u3u1ySabuB8321zS9oVG99eo+J89e7aMGDHCxfCAAQNk8ODBLVBUi9fnn39ezjnnHHn\/\/fdl2223dd+7Wnfddav6Wi0Y33bbbUIW+4MPPpCNN97YZbh33nln11QWxsenMtikfvLJJ7L22mvLaaedJocddlhmxhfF\/OWXXxbuZJ544oly1llnZXKMtfhIvZ4xAVMjkiyk+++\/v0ydOtUF6SGHHCJDhgyR3XffvcYWk3\/siSeekC233NKRSVTAVJtL6BsZyY96VQEDEe+xxx6yePFiF9j77ruvHH\/88dJM8\/CzWrBggXTs2NGJ4EsuucQJGTBvxrmk7QuN7K+R8Y\/PLFy4UO69917nL1EBUy1eebvy7LPPlr333lsuuugiWX\/99d3f6z0XNkmI8U033VRmzZrlPhL65JNPyuqrr171m1tpje+dd96R9dZbz23gwJJ+H3jgAbdxyAJ+3q\/hhO9+97turPC2FzBZGmMjY5C+TcDUaAF+L8ZTTz3lMjAUPn43b948ufzyy2tsMb3HeKU2KmCqzSXrFxzZSSFkyMo08zxYiBAwkBYE1cxzSc+TG9dTFuJ\/7NixzvejAqZSvH788cdy7LHHyqOPPupAI\/5PP\/10l5FNci7\/\/e9\/ZbvttpNnnnnGZXuyNr5XXnnFZc\/vv\/9+J7iyNL6bb77ZZazAkOIFTJbG2LgI\/N+eTcDUaAEWThYbdjAUPnx36623yo033lhji+k9VipgKs2FNHDoGznpjXrVnj766CM54IAD3LELrwk26zwOP\/xwIasE1jfddJNssMEGTTuXRvpDmn1nIf5LBUy1b9oQKxwZ+S+Mc4xEJvaFF16o6Gv14LJbbrlFpk2bJhwrZWl8HCOxUXjvvffcN7+IwSyNj8zQmWee6XC76qqrWgRMlsaYZrxV6ssETI1WgMCiqnjGjBly++23yw033FBji+k9Vk7AlJvL9ddfH\/xGTnqjXrknvt9xyimnuFQ1KWpKJZtkeR5+VuykudfAcRJn8s08l0b5RJr9ZiH+SwVMtW\/aLFq0SPi44x133OFgYme\/yy67tAiYJLjssccek\/PPP1\/IJODXWRsfcyYTxQVuuJsMUaVvgqWN3wknnCCnnnqq7LDDDitxQRYxTDPuSvsyAVMj+kmmXWsckvqxZj9C4riF3cnmm2\/uzvJ9afZjFy5nQvj33HOPHSGpvbkxFbMQ\/3GPkI455hhBVPiFO8kjJO68cOTBhg6+8aXa8Uea44t6Dffn6Hu\/\/fareoSU5vh23HFHd8GY8uGHH7r\/Hnnkke6oPIsYNiYK7QipZtz9xbe7775bNtpoIzn00EPdWXSWL\/H6yZYKmGpzydo3MvhdVRAjwX3ZZZfJaqut1mLDZpoHg+YiJql8Luixs7r00kvdmxuk+pttLjUHUpM+mIX4LydgqsUrb7PwFpK\/xEvGgTcn6z2XZ5991t2vIfNZ+jmKLIyPNxjJtKy11lru3iLCgKM1eDEL4ysNidJsXxbH2KgwtgxMK5C\/8847BRJhUT3ooIPcW0hZLozvoYcekrfeeks222wz2WmnneTqq692Q640l6x9I+Ppp59259W8McBbDRR2Thy\/NNM8GCuvT3MMxgKy5pprunQx5ORfo24Wm2TZ55McW6Pin0W3f\/\/+wr0WSrt27eS6666Tbt26uaOhSt+0QViwyUIkb7PNNu4FBN5EqhY3teDH2HjBwbdNG9zl4JflZmF8cDbjoTBGjmwPPvhg9\/csjC8kYLI4xlr8pB7PmICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4ImICpB4rWhiFgCBgChoAhYAikioAJmFThts4MAUPAEDAEDAFDoB4I\/D814Rw2uj\/8+AAAAABJRU5ErkJggg==","height":337,"width":560}}
 %---
