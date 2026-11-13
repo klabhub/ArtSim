@@ -123,7 +123,8 @@ function [vClean ,results] = artifactRemoval(v,pv)
 % tACS frequency.
 % OPTIONS:
 % tacsFrequency - the frequency of the stimulation voltage
-% 
+% frequencyLimits -  the band around tacsFrequency to remove [0 0] means
+% only the frequency closes to the tacsFrequency.
 %% Mode: RBAR
 % Regression based artifact removal -  regresses out signal that is
 % correlated with a specified voltage (the artifact proxy;  the measured
@@ -156,6 +157,7 @@ arguments
     pv.mode (1,:) cell {mustBeMember(pv.mode,{'NOP','NOTCH','RBAR','FBAR','FASTR','TC','MEANREMOVAL','PCA','ANC-SEGMENT','ANC-ARTIFACT','ANC-REFERENCE'})} = {}
     pv.segmentDuration (1,1) double = 3
     pv.tacsFrequency (1,1) double = NaN
+    pv.frequencyLimits (1,2) double = [0 0]
     pv.autocorrelationWindow (1,1) double = 0
     pv.recordingSamplingRate (1,1) double = 30e3
     pv.slack (1,1) double = 2e-3
@@ -276,7 +278,7 @@ for m=1:nrModes
                 results.tcShift= shift;
             end
         case 'FBAR'
-            vClean = FBAR(vClean,pv.tacsFrequency,samplingRate);
+            vClean = FBAR(vClean,pv.tacsFrequency,samplingRate,pv.frequencyLimits);
         case 'RBAR'
             vClean = RBAR(vClean,vTacsRecord);
         case 'NOTCH'

@@ -22,7 +22,8 @@ classdef artSim < handle
         tacsAmplitude             = 0;        % [A] Current amplitude
         tacsPhaseOffset           = 0;        % [Rad] Current phase
         tacsFrequency             = 0;        % [Hz] Current frequency
-        tacsShape                 = 'sine';   % ['sine'] {'sine','sawtooth','square','none'}
+        tacsShape                 = 'sine';   % ['sine'] {'sine','sawtooth','square','none','am'}
+        tacsCarrierFrequency      = 0;        % [Hz] Carrier frequency for AM Modulated tACS.
         % tDCS
         tdcsMean                  = 0;       % [A] Current
         % Ramp (applied to both tACS and tDCS)
@@ -485,9 +486,11 @@ classdef artSim < handle
             % tacsAmplitude  - Amplitude of the sinusoid [A]
             % tacsFrequency   - Frequency of stimulation [Hz]
             % tacsPhaseOffset     - Phase at time 0. [rad]
-            % tacsShape    - sine,sawtooth, square
+            % tacsShape    - sine,sawtooth, square, am
+            % tacsCarrierFrequency  - Carrier frequency of the amplitude-modulated tACS 
             % tdcsMean   -  Mean current [A]
             % tcsRamp   - Duration of a ramp [s]
+            %
             %
             % resistance - Effective resistance of the path between stimulation
             %               electrode and the recording site.
@@ -507,6 +510,7 @@ classdef artSim < handle
                 pv.showTime (1,1) double = 2
             end
 
+            assert(o.stimulatorSamplingRate>max(o.tacsFrequency,o.tacsCarrierFrequency)*2,"The stimulator sampling rate (%f) is too low for this carrier frequency (%f).",o.stimulatorSamplingRate,o.tacsCarrierFrequency)
             % Determine the output
             switch upper(o.tacsShape)
                 case 'SINE'
@@ -518,6 +522,9 @@ classdef artSim < handle
                     virtualOutputCurrent = o.tacsAmplitude*(2*(sin(2*pi*o.tacsFrequency*o.tTcs+o.tacsPhaseOffset)>0)-1);
                 case 'NONE'
                     virtualOutputCurrent = zeros(size(o.tTcs));
+                case 'AM'
+                    % Amplitude modulated sinusoidal tACS                    
+                    virtualOutputCurrent = o.tacsAmplitude*(0.5*sin(2*pi*o.tacsFrequency*o.tTcs+o.tacsPhaseOffset)+0.5).*sin(2*pi*o.tacsCarrierFrequency*o.tTcs);
                 otherwise
                     error('Unknown tACS shape %s',o.tacsShape);
             end
@@ -812,17 +819,20 @@ classdef artSim < handle
 
             %% Generate a figure
             if ~isempty(pv.axs)
-                if isnan(pv.axs)
-                    [f,axs] = fig('Name',strjoin(arMode,'/')+pv.tag,'paperCols',1,'height',9,'nrRows',3,'byColumn',false);
+                if any(isgraphics(pv.axs))
+                     axs = pv.axs;
                 else
-                    axs = pv.axs;
+                    [f,axs] = fig('Name',strjoin(arMode,'/')+pv.tag,'paperCols',1,'height',9,'nrRows',3,'byColumn',false);                  
                 end
 
                 if numel(axs)>=1 && isgraphics(axs(1))
                     axes(axs(1)) % Time course
                     yyaxis left  % Truth and recovered signal (small)
                     tStay = o.tRecord >= pv.tlim(1)  &  o.tRecord < pv.tlim(2) ;
-                    h = plot(o.tRecord(tStay)-pv.tlim(1),[o.vTruth(tStay) vRecovered(tStay)]./1e-6,'LineWidth',1,'LineStyle','-');
+                    y = [o.vTruth(tStay) vRecovered(tStay)]./1e-6;
+                    y = y - mean(y);
+                    x = o.tRecord(tStay)-pv.tlim(1);
+                    h = plot(x,y,'LineWidth',1,'LineStyle','-');
                     ylabel 'Amplitude (\muV)'
                     ax =gca;
                     ax.YColor ='k';
@@ -830,8 +840,9 @@ classdef artSim < handle
                     plot(xlim,zeros(1,2),'k-')
                     ylim([-1 1]*max(abs(ylim)))
                     yyaxis right % Signal with artifact
-
-                    h(3) = plot(o.tRecord(tStay)-pv.tlim(1),o.vContaminated(tStay)/1e-6,'LineWidth',1,'LineStyle','-');
+                    y= o.vContaminated(tStay)/1e-6;
+                    y= y-mean(y);
+                    h(3) = plot(x,y,'LineWidth',1,'LineStyle','-');
                     h(1).Color = 'r';
                     h(2).Color = 'g';
                     h(3).Color = 'b';
@@ -876,7 +887,7 @@ classdef artSim < handle
                 end
                 if  numel(axs)>=3 && isgraphics(axs(3))
                     axes(axs(3)); % Error as a percentage
-                    yyaxis left
+                   % yyaxis left
                     plot(frequency,pctError,'LineWidth',1,'Color','k');
                     xlabel 'Frequency (Hz)'
                     ylabel 'Error (%)'
@@ -884,11 +895,11 @@ classdef artSim < handle
                     ylim([-1 1]*max(abs(ylim)))
                     hold on
                     plot(xlim,zeros(1,2),'k-')
-                    yyaxis right
-                    plot(frequency,results.mismatch/1e-6,'LineWidth',1,'Color','m')
-                    set(gca,'YScale','Linear','YColor','m');
-                    ylabel 'Error (\muV)'
-                    ylim([-1 1]*max(abs(ylim)))
+                    % yyaxis right
+                    % plot(frequency,results.mismatch/1e-6,'LineWidth',1,'Color','m')
+                    % set(gca,'YScale','Linear','YColor','m');
+                    % ylabel 'Error (\muV)'
+                    % ylim([-1 1]*max(abs(ylim)))
                 end
                 % Export figure for paper
                 if pv.exportFig
@@ -954,7 +965,6 @@ classdef artSim < handle
                 'nrPhaseBins',pv.nrPhaseBins,...
                 'nrBootstraps',pv.nrBootstraps);
 
-            %% Test whether the
             %% Visualize
             % Generate a figure
             if isempty(pv.axs)
