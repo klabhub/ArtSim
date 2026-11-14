@@ -66,14 +66,17 @@ classdef artSim < handle
         pinkNoise                 = true;     % Set to true to generate pink noise (white otherwise)
         multiplicative            = 0;        % Standard deviation of the multiplicative noise
 
-        %% Properties of the ADC converter.
+        %% Properties of the pream and ADC converter.
+        % The default values specify a unity gain amplifier with a linear
+        % response over +/- 100 mV.
+        amplifierGain             = 1;         % Preamp gain. 
         adcLinearRange            = 100e-3;    % [V] Range over which the amplifier is linear
         adcNonlinearity           = 100;       % The saturation profile of the amplifier near the edge
         %                                       of the linear range. 2 = very sigmoidal, 100 = linear inside the range,
         %                                       saturation outside (i.e. piecewise linear). See amplify
         adcRange                  = 100e-3;     % The range of the ADC; bits are distributed evenly across this +/- range.
         adcBitDepth               = 24;       % Number of bits in the ADC
-        adcGain                   = 1;        % Amplifier gain
+        
 
         highPass                  = 0;        % [Hz] Highpass cutoff of the pre-amplification hardware filter.
         lowPass                   = 0;        % [Hz] lowpass cutoff of the post-amplification, post-digitization filter.
@@ -194,7 +197,7 @@ classdef artSim < handle
                 {'additive','pinkNoise','multiplicative'});
             displayGroup('ADC and recording filters', ...
                 {'adcLinearRange','adcNonlinearity','adcRange', ...
-                'adcBitDepth','adcGain','highPass','lowPass'});
+                'adcBitDepth','amplifierGain','highPass','lowPass'});
 
             function displayGroup(title,names)
                 fprintf('\n%s:\n',title);
@@ -740,7 +743,7 @@ classdef artSim < handle
                     recV(:,j) = decimate(highPassFiltered,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
                 end
                 % Amplification
-                [amplifiedV] = artSim.amplify(recV,o.adcLinearRange,o.adcNonlinearity,o.adcGain);
+                [amplifiedV] = artSim.amplify(recV,o.adcLinearRange,o.adcNonlinearity,o.amplifierGain);
                 % Sampling  (assuming round to nearest bit)
                 amplifiedV = min(max(amplifiedV,-o.adcRange),o.adcRange);
                 recV = o.adcVoltsPerBit*round(amplifiedV./o.adcVoltsPerBit);
@@ -784,7 +787,7 @@ classdef artSim < handle
                         ax = axes('Position',[.8 .7 .1 .1]);
                         % Show inset with amplification profile plus saturation range.
                         x = min(o.vTcsActual(:)):1e-6:max(o.vTcsActual(:));
-                        [y,satPoint]= artSim.amplify(x,o.adcLinearRange,o.adcNonlinearity,o.adcGain,satLevel=99);
+                        [y,satPoint]= artSim.amplify(x,o.adcLinearRange,o.adcNonlinearity,o.amplifierGain,satLevel=99);
                         plot(ax,x/1e-3,y/1e-3);
                         hold on
                         plot(satPoint*[1e3 1e3],ylim)
