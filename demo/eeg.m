@@ -67,20 +67,20 @@ frequencyResolution = 1;
 %[text] %[text:anchor:H_218F3721] ### FASTR
 %[text] Template based artifact removal 
 [resultsFastr] = artifactRemoval(A.vContaminated,fastr,ar{:});
-analyzeEEG(A,resultsFastr.signal,freqRes=frequencyResolution,axs=axs4(1,1:3),legend=false); %[output:63d78f12]
+analyzeEEG(A,resultsFastr,freqRes=frequencyResolution,axs=axs4(1,1:3),legend=false); %[output:63d78f12]
 %[text] ### FBAR
 %[text] Fourier based artifact removal
 resultsFbar = artifactRemoval(A.vContaminated,fbar,ar{:});
-analyzeEEG(A,resultsFbar.signal,freqRes=frequencyResolution,axs=axs4(2,1:3),legend=false); %[output:63d78f12]
+analyzeEEG(A,resultsFbar,freqRes=frequencyResolution,axs=axs4(2,1:3),legend=false); %[output:63d78f12]
 %[text] %[text:anchor:H_AAE631F7] ### RBAR
 %[text] Regression based artifact removal:
 resultsRbar= artifactRemoval(A.vContaminated,rbar,ar{:},vRecordTcs = A.vRecordTcs);
-analyzeEEG(A,resultsRbar.signal,freqRes=frequencyResolution,axs=axs4(3,1:3),legend=false); %[output:63d78f12]
+analyzeEEG(A,resultsRbar,freqRes=frequencyResolution,axs=axs4(3,1:3),legend=false); %[output:63d78f12]
 %[text] 
 frequencyResolution = 0.1;
-analyzeEEG(A,resultsFastr.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs4(1,4)],legend=false); %[output:63d78f12]
-analyzeEEG(A,resultsFbar.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs4(2,4)],legend=false); %[output:63d78f12]
-analyzeEEG(A,resultsRbar.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs4(3,4)],legend=false); %[output:63d78f12]
+analyzeEEG(A,resultsFastr,freqRes=frequencyResolution,axs=[gobjects(1,2) axs4(1,4)],legend=false); %[output:63d78f12]
+analyzeEEG(A,resultsFbar,freqRes=frequencyResolution,axs=[gobjects(1,2) axs4(2,4)],legend=false); %[output:63d78f12]
+analyzeEEG(A,resultsRbar,freqRes=frequencyResolution,axs=[gobjects(1,2) axs4(3,4)],legend=false); %[output:63d78f12]
 ylim(axs4(:,[3 4]),[-40 40]) %[output:63d78f12]
 %[text] The first columnshows a 100 ms snippet of the simulated neural signals (red) and recovered signal (green) on the left axis. The artfiact (blue) is orders of magnitude larger and shown on the right axis. Some mismatches between ground truth and recovered signals are visible in these snippets. 
 %[text] The mismatch is easier to see in the spectral domain (second column); mismatches are biggest near the tACS frequency, but also spread across the specrum.  The third column expresses the mismatch as a percentage of ground truth signal; FASTR has residual errors across the spectrum, FBAR & RBAR perform better, recovering most of the spectrum, except for a band around the tACS frequency ("forbidden zones").
@@ -100,9 +100,9 @@ A.sim;
 
 frequencyResolution = 0.1;
 resultsFastr = artifactRemoval(A.vContaminated,fastr,ar{:});
-analyzeEEG(A,resultsFastr.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(1,1)],legend=false);
+analyzeEEG(A,resultsFastr,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(1,1)],legend=false);
 resultsRbar= artifactRemoval(A.vContaminated,rbar,ar{:},vRecordTcs = A.vRecordTcs);
-analyzeEEG(A,resultsRbar.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(1,2)],legend=false);
+analyzeEEG(A,resultsRbar,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(1,2)],legend=false);
 %[text] Next we simulate a impedance modulation that models the ballistic artifacts expected from a heartbeat. This uses an ECG recording and a simple body resonance model to simulate the ballistic impedance changes. See `zHeartbeat.m` for details.
 %A      = artSim(eegDefaults); % Start fresh
 A.zFun = @zHeartbeat ;
@@ -115,9 +115,9 @@ A.simRecording;     % 3. Simulate recording
 
 
 resultsFastr = artifactRemoval(A.vContaminated,fastr,ar{:});
-analyzeEEG(A,resultsFastr.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(2,1)],legend=false);
+analyzeEEG(A,resultsFastr,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(2,1)],legend=false);
 resultsRbar= artifactRemoval(A.vContaminated,rbar,ar{:},vRecordTcs = A.vRecordTcs);
-analyzeEEG(A,resultsRbar.signal,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(2,2)],legend=false);
+analyzeEEG(A,resultsRbar,freqRes=frequencyResolution,axs=[gobjects(1,2) axs(2,2)],legend=false);
 
 ylim(axs,[-40 40])
 %[text] Clearly FASTR (a,c) does not recover the neural signal of either sinusoidal/breathing (a) or pulsed/heartbeat (b) impedance artifacts; the multiplicative interactions between physiological artifacts and the true neural signal results in spurious signals across the entire spectrum.  Noury et al explain why this should happen and why there are two prominent peaks in a).  RBAR gets rid of most artifacts and only has a small forbidden zone near the tACS frequency. FBAR (not shown) has the same kind of issues as FASTR.
@@ -142,18 +142,18 @@ A.additive                  = 0;
 A.sim;
 
 resultsNop = artifactRemoval(A.vContaminated,fastr,ar{:});
-analyzeEEG(A,resultsNop.signal,freqRes=1,axs=[axs(1) gobjects(1,2)],legend=false,tlim=tlim,lineWidth=1); %[output:9aaddddc]
+analyzeEEG(A,resultsNop,freqRes=1,axs=[axs(1) gobjects(1,2)],legend=false,tlim=tlim,lineWidth=1); %[output:9aaddddc]
 
 %[text] Restore the background activity and show the error spectra.
 A.additive  =  defaults.additive;
 A.sim;
 
 resultsNop = artifactRemoval(A.vContaminated,struct('name','nop'),ar{:});
-analyzeEEG(A,resultsNop.signal,freqRes=1,axs=[gobjects(1,2) axs(2)],legend=false,tlim=tlim,lineWidth=1); %[output:9aaddddc]
+analyzeEEG(A,resultsNop,freqRes=1,axs=[gobjects(1,2) axs(2)],legend=false,tlim=tlim,lineWidth=1); %[output:9aaddddc]
 
 resultsRbar = artifactRemoval(A.vContaminated,rbar,recordingSamplingRate = A.recordingSamplingRate,segmentDuration=A.duration,vRecordTcs = A.vRecordTcs);
 
-analyzeEEG(A,resultsRbar.signal,freqRes=1,axs=[gobjects(1,2) axs(3)],legend=false,tlim=tlim,lineWidth=1); %[output:9aaddddc]
+analyzeEEG(A,resultsRbar,freqRes=1,axs=[gobjects(1,2) axs(3)],legend=false,tlim=tlim,lineWidth=1); %[output:9aaddddc]
 
 yylinkaxes(axs([2 3])); %[output:9aaddddc]
 
