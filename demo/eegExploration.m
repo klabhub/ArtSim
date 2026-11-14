@@ -6,7 +6,7 @@
 %[text] %[text:anchor:H_D32E8D0B] ## Setup Simulation
 %[text] First define the stimulation and recording parameters.
 run('../startup.m'); % Make sure all toolboxes are on the path
-
+defaults = [];
 defaults.reproducible              = true;    % Fix the random number generator to get reproducible results
 %[text] Equipment:
 defaults.stimulatorSamplingRate    = 1e3;     % 1 kHz
@@ -17,7 +17,8 @@ defaults.lowPass                   = 100;
 %[text] Experiment:
 defaults.duration                  = 2*60;   % 2 min of data
 defaults.tacsFrequency             = 10;
-defaults.tacsAmplitude             = 0;
+defaults.tacsAmplitude             = 1e-3;
+defaults.resistance                = 15;
 defaults.tdcsMean                  = 0;
 %[text] Signals. Setting everything except the background to 0.
 defaults.additive                  = 100e-6;   % Background Noise stdev
@@ -56,7 +57,7 @@ rbar.options = [];
 %[text] ## Signal frequency dependence
 %[text] The analysis in eeg.m focuses only on a single intrinsic oscillation, here I do repeat this for a range of frequencies to show that the relative performance of the methods is approximately the same no matter what the neural signal is. 
 A                  = artSim(defaults); % Start fresh
-
+frequencyResolution = 0.1;
 methods = {fastr,fbar,rbar};
 signalFreqs = 2.^(0:5);  % Test these frequencies
 nrFreqs = numel(signalFreqs);
@@ -64,12 +65,12 @@ nrMethods = numel(methods);
 forbiddenBand = nan(nrFreqs,nrMethods);
 forbidden = nan(nrFreqs,nrMethods);
 mre = nan(nrFreqs,nrMethods);
-for m=1:nrMethods
+for m=2:nrMethods
     for  f = 1:nrFreqs
         A.lfpFrequency = signalFreqs(f);
         A.sim;
         [arResults] = artifactRemoval(A.vContaminated,methods{m},ar{:},vRecordTcs = A.vRecordTcs);     
-        results = analyzeEEG(A,arResults.signal,freqRes=frequencyResolution,axs=[]);
+        results = analyzeEEG(A,arResults,freqRes=frequencyResolution,axs=[]);
         forbiddenBand(f,m) = results.forbiddenBand;
         forbidden(f,m) = results.forbidden;
         mre(f,m) = results.meanPctError;

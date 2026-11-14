@@ -57,6 +57,7 @@ else
     results.forbiddenBand = 0;
 end
 
+arMode = strjoin(cellfun(@(x) x.name,ar.step),'/');
 
 %% Generate a figure
 if ~isempty(pv.axs)
