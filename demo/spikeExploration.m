@@ -5,30 +5,30 @@
 %[text] %[text:anchor:H_9BC26763] ## Setup Simulation
 %[text] Simulation parameters
 run('../startup'); % Make sure all toolboxes are on the path
-clear spkDefaults arDefaults % Avoid lingering values from prevoous runs
-spkDefaults.duration                  = 120;    % 2 min
-spkDefaults.stimulatorSamplingRate    = 1e3;     % e.g., Starstim (1 kHz)
-spkDefaults.currentResolution         = 1e-6;    % 1 muA
-spkDefaults.resistance                = 1;        % 1 mA -> 1 mV artifact
-spkDefaults.recordingSamplingRate     = 30e3;     % 30kHz
-spkDefaults.adcLinearRange            = 6.8e-3;   % Linear range of amplified 6.8 mV
-spkDefaults.adcNonlinearity           = 100;      % Piecewise linear
-spkDefaults.adcRange                  = 10e-3;     % Input range of the ADC.
-spkDefaults.adcBitDepth               = 16;       % Number of bits in the AD convertor
-spkDefaults.adcGain                   = 20;       % Amplify 20x
-spkDefaults.highPass                  = 0.01;     % High pass filter on the preamp. 
-spkDefaults.reproducible              = 2;       % Seed the RNG to get reproducible results
+defaults = [];
+defaults.duration                  = 120;    % 2 min
+defaults.stimulatorSamplingRate    = 1e3;     % e.g., Starstim (1 kHz)
+defaults.currentResolution         = 1e-6;    % 1 muA
+defaults.resistance                = 1;        % 1 mA -> 1 mV artifact
+defaults.recordingSamplingRate     = 30e3;     % 30kHz
+defaults.adcLinearRange            = 6.8e-3;   % Linear range of amplified 6.8 mV
+defaults.adcNonlinearity           = 100;      % Piecewise linear
+defaults.adcRange                  = 10e-3;     % Input range of the ADC.
+defaults.adcBitDepth               = 16;       % Number of bits in the AD convertor
+defaults.adcGain                   = 20;       % Amplify 20x
+defaults.highPass                  = 0.01;     % High pass filter on the preamp. 
+defaults.reproducible              = 2;       % Seed the RNG to get reproducible results
 %[text] Define the common neural signals
-spkDefaults.spikePeak                 = 60e-6;   % 60 muV
-spkDefaults.spikeRate                 = 100;      % 100 spk/s
-spkDefaults.poisson                           = true;     % Poisson spiking
-spkDefaults.fixNrSpikes               = true;     % Deviate from Poisson to get exact firing rate.
-spkDefaults.refractoryPeriod          = 1.5e-3;   % 1.5 ms
-spkDefaults.additive                  = 20e-6;    % Background activity/noise
-spkDefaults.pinkNoise                 = true;     % Pink background noise
-spkDefaults.synchrony                 = 0;        % Poisson random spikes, no relation with LFP
-spkDefaults.lfpAmplitude              = 0;        % No intrinsic oscillation
-spkDefaults.multiplicative            = 0;        % No multiplicative noise
+defaults.spikePeak                 = 60e-6;   % 60 muV
+defaults.spikeRate                 = 100;      % 100 spk/s
+defaults.poisson                           = true;     % Poisson spiking
+defaults.fixNrSpikes               = true;     % Deviate from Poisson to get exact firing rate.
+defaults.refractoryPeriod          = 1.5e-3;   % 1.5 ms
+defaults.additive                  = 20e-6;    % Background activity/noise
+defaults.pinkNoise                 = true;     % Pink background noise
+defaults.synchrony                 = 0;        % Poisson random spikes, no relation with LFP
+defaults.lfpAmplitude              = 0;        % No intrinsic oscillation
+defaults.multiplicative            = 0;        % No multiplicative noise
 
 %[text] Define the common parameters for artifact removal
 arDefaults.slide                     = false;   % No sliding segment
@@ -38,7 +38,7 @@ arDefaults.pcaNr                     = 2;       % First two PC are removed
 arDefaults.pcaVarExplained           = Inf;     % Ignore explained variance, always remove 2.
 arDefaults.pcaNrSegsPerWindow        = Inf;     % Use all segments (plus the tACS signal; below) to determine basis set.
 arDefaults.referenceSegment          = 1;       % Align to first segment
-arDefaults.recordingSamplingRate      = spkDefaults.recordingSamplingRate; % Match to the recording
+arDefaults.recordingSamplingRate      = defaults.recordingSamplingRate; % Match to the recording
 %[text] Define the filter that extract signals in the "spike band":
 lowCut                      = 500;  % high pass filter cut off
 highCut                     = 7000; % Low pass filter cut off.
@@ -47,7 +47,7 @@ filterOrder                 = 3; % Filter order  (Butterworth)
 %[text] %[text:anchor:H_D38DE7B6] ## Frequency dependence
 %[text] The spectral analysis (spikeArtifacts.mlx) shows that the contamination of the spike band depends on the frequency of tACS. Here I investigate how how different tACS frequencies affect the fraction of false negatives (for the current choices of neural signal, noise, and thresholds, the false positive rate is negligible).
 methods  =["NOP" "FASTR" "RBAR"];
-spk = artSim(spkDefaults);
+spk = artSim(defaults);
 ar = arDefaults;
 spk.tacsAmplitude             = 120e-6;   % A->V artifact
 nrMethods = numel(methods);
@@ -79,7 +79,7 @@ legend ('Sham','tACS','Location','south') %[output:3121117f]
 %%
 %[text] ## Interactions
 %[text] %[text:anchor:TMP_4a45] The simulations above show a non zero false negative rate after FASTR and that the tACS signal affects the results in the non-tACS trials (due to the shared voltage threshold and waveform clustering procedure). The percentages shown depend on the randomization; to quantify an average effect, I bootstrapped this.
-spk = artSim(spkDefaults);
+spk = artSim(defaults);
 ar = arDefaults;
 spk.tacsAmplitude    = 120e-6;   % A->V artifact
 spk.tacsFrequency    = 40; % Example frequency
@@ -111,7 +111,7 @@ title (sprintf('Cross Contamination: r = %.2f',r(1,2))); %[output:344fede1]
 %%
 %[text] ## tDCS
 %[text] Repeat with tDCS and a heartbeat artifact.
-spk = artSim(spkDefaults);
+spk = artSim(defaults);
 ar = arDefaults;
 spk.tacsAmplitude    = 0;    % A->V artifact
 spk.tdcsMean         = 1e-3;   % A->V artifact

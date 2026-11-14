@@ -173,6 +173,53 @@ classdef artSim < handle
     end
 
     methods (Access=public)
+        function disp(o)
+            %disp - Display public simulation parameters by concept
+            fprintf('artSim simulation parameters\n');
+            displayGroup('Simulation', ...
+                {'reproducible','duration','fromData'});
+            displayGroup('Recording and stimulation', ...
+                {'recordingSamplingRate','stimulatorSamplingRate', ...
+                'currentResolution','resistance','tacsAmplitude', ...
+                'tacsPhaseOffset','tacsFrequency','tacsShape', ...
+                'tacsCarrierFrequency','tdcsMean','tcsRamp'});
+            displayGroup('Physiological impedance artifacts', ...
+                {'zFrequency','zAmplitude','zDuration','zVariability','zFun'});
+            displayGroup('Spikes', ...
+                {'spikePeak','spikePeakVariation','spikeRate','poisson', ...
+                'fixNrSpikes','refractoryPeriod','synchrony','preferredPhase'});
+            displayGroup('Local field potential', ...
+                {'lfpAmplitude','lfpPhaseOffset','lfpFrequency','lfpPeakWidth'});
+            displayGroup('Background noise', ...
+                {'additive','pinkNoise','multiplicative'});
+            displayGroup('ADC and recording filters', ...
+                {'adcLinearRange','adcNonlinearity','adcRange', ...
+                'adcBitDepth','adcGain','highPass','lowPass'});
+
+            function displayGroup(title,names)
+                fprintf('\n%s:\n',title);
+                for k = 1:numel(names)
+                    displayProperty(names{k});
+                end
+            end
+
+            function displayProperty(name)
+                value = o.(name);
+                if isa(value,'function_handle')
+                    valueText = ['@' func2str(value)];
+                elseif ischar(value)
+                    valueText = ['''' value ''''];
+                elseif isstring(value)
+                    valueText = ['"' char(value) '"'];
+                elseif isnumeric(value) || islogical(value)
+                    valueText = mat2str(value);
+                else
+                    valueText = class(value);
+                end
+                fprintf('  %-24s %s\n',[name ':'],valueText);
+            end
+        end
+
         function reset(o)
             % Reset the object.
             o.ixSpike = [];
@@ -223,18 +270,18 @@ classdef artSim < handle
             end
         end
 
-        function data = readData(o,src,pv)
+        function data = addData(o,src,pv)
             % This function loads EEG or LFP data to serve as ground truth.
-            % Two example formats are provided; an EEGLAB EEG struct or a
-            % Fieldtrip data struct.
-            % From this data struct, the first o.duration seconds are used.
+            % The src  can be an EEGLAB EEG struct or a Fieldtrip data struct
+            % from which the first o.duration seconds will be used.
+            % Alternatively, you can supply a vector of samples that
+            % matches o.duration*o.recordingSamplingRate ("RAW").
             %
             arguments
                 o (1,1) artSim
                 src  % The EEGLAB EEG struct or a Fieldtrip data struct, or a matrix of doubles with samples along the first dimension, channels along the second
                 pv.format (1,1) string {mustBeMember(pv.format,["EEGLAB" "FIELDTRIP" "RAW"])} = "EEGLAB";
-                pv.channel (1,:) =1 % Which channel(s) to use from a multichannel dataset (will be averaged)
-                pv.trial  (1,:) = 1 % Which trial(s) to use
+                pv.channel (1,:) =1 % Which channel(s) to use from a multichannel dataset (will be averaged)                
             end
             switch pv.format
                 case "EEGLAB"
@@ -266,8 +313,7 @@ classdef artSim < handle
             % Upsample to quasi continuous sampling rate to match the simulated data
             o.lfp = resample(data,o.quasiContinuousSamplingRate, o.recordingSamplingRate);
             o.lfp = o.lfp -mean(o.lfp,1,"omitmissing");
-            o.fromData = true;
-            fprintf('Using %.1f s of %s data.\n',o.duration, pv.format);
+            o.fromData = true;            
         end
 
         function sim(o)
@@ -275,9 +321,11 @@ classdef artSim < handle
             o.rng               % Reset rng if .reproducible
             o.reset;            % Start fresh
             o.simLfp;           % 1. Generate LFP/EEG .
-            o.simTCS;           % 2. Generate the TCS voltage
-            o.simRecording;     % 3. Simulate recording
+            o.simSpikes;        % 2. Generate spikes
+            o.simTCS;           % 3. Generate the TCS voltage
+            o.simRecording;     % 4. Simulate recording
         end
+        
         function simLfp(o)
             % simLfp - Simulate the Local Field Potential
             % LFPs can be single sinusoids (lfpPeakWidth =0) with
@@ -748,368 +796,8 @@ classdef artSim < handle
             end
 
         end
-        function results = simPlotEEG(o,prms,arMode,pv)
-            % Helper function that shows the steps needed to run a
-            % simulation followed by artifact correction and analysis for
-            % an EEG (or LFP) experiment.
-            % SEE ALSO eegArtifacts.mlx for examples.
-            arguments
-                o (1,1) artSim
-                prms (1,1) struct               % Artifact removal parameters
-                arMode (1,:) string             = "FASTR"
-                pv.freqRes (1,1) double         = 1
-                pv.highCutOff (1,1) double      = 35 % Hz
-                pv.lowCutOff (1,1) double       = 1 % Hz
-                pv.tag (1,1) string             = ""
-                pv.exportFig (1,1) logical      = false
-                pv.errorThreshold (1,1) double  = 1 % More than 1% error is "forbidden".
-                pv.amplitudeThreshold (1,1) double =0.1e-6 % Ignore frequencies with amplitudes less than this [V].
-                pv.fillHz (1,1) double          = 1;
-                pv.axs  = NaN
-                pv.tlim = [0 0.1] + mean(o.tRecord);
-                pv.lineWidth = 2;
-                pv.legend (1,1) logical = true;
-            end
-
-            if isfield(prms,'common') && isfield(prms.common,'tacsFrequency') && ...
-                    prms.common.tacsFrequency ~= o.tacsFrequency
-                fprintf("Frequency in the simulation (%.2f) does not match the frequency in the ar (%.2f)\n", ...
-                    o.tacsFrequency,prms.common.tacsFrequency)
-            end
-            %% Initialize the simulation , simulate the recording, then perform artifact removal.
-            o.rng               % Reset rng if .reproducible
-            o.reset;            % Start fresh
-            o.simLfp;           % 1. Generate LFP/EEG .
-            o.simTCS;          % 2. Generate the TCS voltage
-            o.simRecording;      % 3. Simulate recording
-            % Now run artifact removal
-            available = {};
-            if isfield(prms,'steps')
-                available = prms.steps;
-                if isstruct(available)
-                    available = num2cell(available);
-                end
-            end
-            selectedSteps = cell(1,numel(arMode));
-            for k = 1:numel(arMode)
-                options = struct;
-                for j = 1:numel(available)
-                    candidate = available{j};
-                    if isstruct(candidate) && isfield(candidate,'name') && ...
-                            strcmpi(string(candidate.name),string(arMode(k)))
-                        if isfield(candidate,'options')
-                            options = candidate.options;
-                        end
-                        break
-                    end
-                end
-                selectedSteps{k} = struct('name',char(arMode(k)),'options',options);
-            end
-            [vRecovered,results] = artifactRemoval(o.vContaminated,selectedSteps{:}, ...
-                segmentDuration=prms.common.segmentDuration, ...
-                tacsFrequency=o.tacsFrequency, ...
-                recordingSamplingRate=o.recordingSamplingRate, ...
-                groundTruth=o.vTruth, ...
-                vRecordTcs=o.vRecordTcs);
-
-            %% Analyze the power spectrum
-            [pwr,frequency] = pspectrum([o.vTruth vRecovered o.vContaminated ],o.recordingSamplingRate,'FrequencyLimits',[pv.lowCutOff pv.highCutOff],'FrequencyResolution',pv.freqRes);
-            amplitude = sqrt(2)*sqrt(pwr); % Convert to V amplitude.  (pspectrum is single sided in rms,hence *sqrt(2))
-
-            % Determine error in frequency domain
-            results.mismatch = amplitude(:,2)-amplitude(:,1);
-            % Divide by neural truth to get pct error
-            pctError = 100*(results.mismatch)./amplitude(:,1);
-            % Ignore frequencies where the signal is below the amplitudeThreshold
-            % to avoid large pctError for empty frequency bins
-            hasSignal = amplitude(:,2)> pv.amplitudeThreshold;
-            pctError(~hasSignal) = NaN;
-            meanPctError = mean(abs(pctError),"omitmissing");
-            results.amplitude = amplitude;
-            results.pctError = pctError;
-            results.frequency = frequency;
-            results.meanPctError  = meanPctError;
-
-            %% Determine the forbidden zones in the spectrum
-            nrToFill = pv.fillHz/(results.frequency(3)-results.frequency(2)) ;
-            [~,~,from, to] = fillRegions(abs(results.pctError)>pv.errorThreshold,nrToFill);
-            forbidden = (results.frequency(to)-results.frequency(from));
-            results.forbidden = sum(forbidden);
-            if o.tacsFrequency==0
-                inTacsBand = false;  % in-band undefined for tDCS.
-            else
-                if ~isempty(from) & ~isempty(to)
-                    inTacsBand = from<find(results.frequency<o.tacsFrequency,1,"last") & to > find(results.frequency > o.tacsFrequency,1,"first");
-                else
-                    inTacsBand =false;
-                end
-            end
-            if any(inTacsBand)
-                results.forbiddenBand = forbidden(inTacsBand);
-            else
-                results.forbiddenBand = 0;
-            end
-
-
-            %% Generate a figure
-            if ~isempty(pv.axs)
-                if any(isgraphics(pv.axs))
-                     axs = pv.axs;
-                else
-                    [f,axs] = fig('Name',strjoin(arMode,'/')+pv.tag,'paperCols',1,'height',9,'nrRows',3,'byColumn',false);                  
-                end
-
-                if numel(axs)>=1 && isgraphics(axs(1))
-                    axes(axs(1)) % Time course
-                    yyaxis left  % Truth and recovered signal (small)
-                    tStay = o.tRecord >= pv.tlim(1)  &  o.tRecord < pv.tlim(2) ;
-                    y = [o.vTruth(tStay) vRecovered(tStay)]./1e-6;
-                    y = y - mean(y);
-                    x = o.tRecord(tStay)-pv.tlim(1);
-                    h = plot(x,y,'LineWidth',1,'LineStyle','-');
-                    ylabel 'Amplitude (\muV)'
-                    ax =gca;
-                    ax.YColor ='k';
-                    hold on
-                    plot(xlim,zeros(1,2),'k-')
-                    ylim([-1 1]*max(abs(ylim)))
-                    yyaxis right % Signal with artifact
-                    y= o.vContaminated(tStay)/1e-6;
-                    y= y-mean(y);
-                    h(3) = plot(x,y,'LineWidth',1,'LineStyle','-');
-                    h(1).Color = 'r';
-                    h(2).Color = 'g';
-                    h(3).Color = 'b';
-                    h(1).LineWidth =pv.lineWidth;
-                    ylim([-1 1]*max(abs(ylim)))
-                    if pv.legend
-                        legend(h,'Neural','Recovered','Recorded','Location','NorthEast')
-                    end
-                    ax =gca;
-                    ax.YColor ='b';
-                    xlabel 'Time (s)'
-                    ylabel 'Amplitude (\muV)'
-
-                end
-                if  numel(axs)>=2 && isgraphics(axs(2))
-                    axes(axs(2)) % Spectrum
-                    yyaxis left  % Truth and recovered signal (small
-                    x = frequency;
-                    y= amplitude(:,[1 2])./1e-6;
-                    h = plot(x(1:10:end),y(1:10:end,:),'LineWidth',1,'LineStyle','-');
-                    ylabel 'Amplitude (\muV)'
-                    hold on
-                    ax =gca;
-                    ax.YScale = 'Log';
-                    ax.YColor ='k';
-
-                    yyaxis right % Signal with artifact
-                    h(3) = plot(frequency,amplitude(:,3)/1e-6,'LineWidth',1,'LineStyle','-');
-                    h(1).Color = 'r';
-                    h(2).Color = 'g';
-                    h(3).Color = 'b';
-                    h(1).LineWidth =pv.lineWidth;
-                    plot(xlim,zeros(1,2),'k-')
-
-                    if ~isgraphics(axs(1))  && pv.legend
-                        legend(h,'Neural','Recovered','Recorded')
-                    end
-                    ax =gca;
-                    ax.YScale = 'Log';
-                    ax.YColor ='b';
-                    set(gca,'XScale','Linear','XLim',[pv.lowCutOff pv.highCutOff]);
-                    xlabel 'Frequency (Hz)'
-                    ylabel 'Amplitude (\muV)'
-                end
-                if  numel(axs)>=3 && isgraphics(axs(3))
-                    axes(axs(3)); % Error as a percentage
-                   % yyaxis left
-                    plot(frequency,pctError,'LineWidth',1,'Color','k');
-                    xlabel 'Frequency (Hz)'
-                    ylabel 'Error (%)'
-                    set(gca,'XScale','Linear','YScale','Linear','XLim',[pv.lowCutOff pv.highCutOff],'YColor','k');
-                    ylim([-1 1]*max(abs(ylim)))
-                    hold on
-                    plot(xlim,zeros(1,2),'k-')
-                    % yyaxis right
-                    % plot(frequency,results.mismatch/1e-6,'LineWidth',1,'Color','m')
-                    % set(gca,'YScale','Linear','YColor','m');
-                    % ylabel 'Error (\muV)'
-                    % ylim([-1 1]*max(abs(ylim)))
-                end
-                % Export figure for paper
-                if pv.exportFig
-                    name = sprintf('%s.png',pv.tag);
-                    exportgraphics(f,fullfile('../docs/',name),"Colorspace",'rgb','ContentType','vector','Resolution',600);
-                end
-
-            end
-            fprintf('%s (r=%.2f rmse = %.0f/%.0f muV ae = %.1f%%)\n',strjoin(arMode,'/'),results.r.(arMode),results.mse.(arMode),o.additive/1e-6,meanPctError);
-
-        end
-
-
-        function [sortResults,falsePositives,falseNegatives,spikes,vRecovered] = simPlotSpikes(o,prms,arMode,pv)
-            % Helper function to run the simulation, recording and artifact correction
-            % and show the results for an single unit recording experiment. See
-            % spikeArtifacts.mlx for examples.
-            arguments
-                o (1,1) artSim
-                prms (1,1) struct       % Artifact removal parms
-                arMode (1,1) string = "FASTR"
-                pv.lowCut (1,1) double = 300
-                pv.highCut (1,1) double = 3000 % Hz
-                pv.filterOrder (1,1) double = 1
-                pv.threshold (1,:) double =1
-                pv.sharedThreshold (1,1) logical= true
-                pv.spikeSortingMode (1,1) string = "MATCHSHAM"
-                pv.nrPhaseBins (1,1) double = 8
-                pv.phaseFromRaw (1,1) logical = true;
-                pv.showMissed (1,1) logical  = false
-                pv.tag (1,1) string = ""
-                pv.exportFig (1,1) logical = false
-                pv.axs  = []
-                pv.xlim  = 4+[0 0.250];
-                pv.nrBootstraps (1,1) double  =0
-            end
-            colors = 'br';
-            o.rng               % Reset rng if .reproducible
-            o.reset;            % Start clean
-            o.simLfp;           % 1. Generate LFP/EEG .
-            o.simSpikes;        % 2. Generate spikes
-            o.simTCS;          % 3. Generate the tACS voltage
-            o.simRecording;      % 4. Simulate recording
-
-
-            %% Run artifact removal
-            available = {};
-            if isfield(prms,'steps')
-                available = prms.steps;
-                if isstruct(available)
-                    available = num2cell(available);
-                end
-            end
-            selectedSteps = cell(1,numel(arMode));
-            for k = 1:numel(arMode)
-                options = struct;
-                for j = 1:numel(available)
-                    candidate = available{j};
-                    if isstruct(candidate) && isfield(candidate,'name') && ...
-                            strcmpi(string(candidate.name),string(arMode(k)))
-                        if isfield(candidate,'options')
-                            options = candidate.options;
-                        end
-                        break
-                    end
-                end
-                selectedSteps{k} = struct('name',char(arMode(k)),'options',options);
-            end
-            [vRecovered] = artifactRemoval(o.vContaminated,selectedSteps{:}, ...
-                segmentDuration=prms.common.segmentDuration, ...
-                tacsFrequency=o.tacsFrequency, ...
-                recordingSamplingRate=o.recordingSamplingRate, ...
-                groundTruth=o.vTruth, ...
-                vRecordTcs=o.vRecordTcs);
-
-            %% Sort spikes
-            [sortResults,spikes] =sortSpikes(o,vRecovered,...
-                'sortMode',pv.spikeSortingMode, ...
-                'spikeBand',[pv.lowCut pv.highCut], ...
-                'filterOrder',pv.filterOrder, ...
-                'threshold',pv.threshold, ...
-                'sharedThreshold',pv.sharedThreshold, ...
-                'phaseFromRaw',pv.phaseFromRaw, ...
-                'nrPhaseBins',pv.nrPhaseBins,...
-                'nrBootstraps',pv.nrBootstraps);
-
-            %% Visualize
-            % Generate a figure
-            if isempty(pv.axs)
-                [f,axs] = fig('Name',"Spikes" + arMode,'paperCols',2,'height',9,'nrRows',2,'nrCols',2,'byColumn',true);
-            else
-                axs = pv.axs;
-            end
-
-            % A/B - Filtered voltage and spike detection
-            for i=1:2
-                if isgraphics(axs(i))
-                    axes(axs(i)); %#ok<LAXES>
-                    h0= plot(o.tRecord,sortResults(i).voltage/(o.adcGain*1e-6),'LineWidth',0.5);
-                    h1 = plot(o.tSimulate(o.ixSpike),zeros(size(o.ixSpike)),'go','MarkerSize',7); % Ground truth
-                    h2= plot(o.tRecord(sortResults(i).ixDetected),zeros(size(sortResults(i).ixDetected)),'g*','MarkerSize',7);
-                    ylim(o.spikePeak/1e-6*[-1 1])
-                    plot(pv.xlim,spikes.info.detect.thresh(min(i,numel(spikes.info.detect.thresh)))/(o.adcGain*1e-6)*[1 1],'k')
-                    xlabel 'Time (s)'
-                    ylabel ('Filtered Voltage (\muV)')
-                    if i==1
-                        legend([h0 h1 h2],'V','Spk','Detect','Orientation','horizontal','Location','north')
-                    else
-                        h3= plot(o.tSimulate,max(ylim)*o.vTcsActual/max(o.vTcsActual),'b:','LineWidth',1);
-                        legend (h3,'tACS')
-                    end
-                    xlim(axs(i),pv.xlim)
-                end
-            end
-            % C  - Polar spike histogram
-            if numel(axs)>2 && isgraphics(axs(3))
-                axs(3).Visible = 'off';
-                axs(3) = polaraxes('Position',axs(3).Position);
-
-                h = nan(1,2);
-                maxRho =0;
-                for i=1:2
-                    theta   = [sortResults(i).binCenters;sortResults(i).binCenters(1)];
-                    rho     = [sortResults(i).spikeCount;sortResults(i).spikeCount(1)]./[sortResults(i).phaseCount;sortResults(i).phaseCount(1)];
-                    h(i)= polarplot(axs(3),theta,rho,'Color',colors(i),'LineStyle','-','LineWidth',1);
-                    hold on
-                    %  polarplot(axs(3),theta,rho, '.','Color',colors(i));
-                    maxRho = max([maxRho;rho]);
-                end
-                axs(3).ThetaTick = [0 45 75 90 135 180 225 270 315];
-                axs(3).ThetaTickLabel = {'0','45','','90','135','180','225','270','315'};
-                axs(3).RLim = [0 maxRho];
-                axs(3).RTick = [0 maxRho];
-                axs(3).RTickLabel = [];
-                axs(3).RAxisLocation =75;
-                legend(h, 'Sham','tACS','Location','SouthEastOutside')
-            end
-
-            % D - waveforms for each phase
-            if numel(axs)>3 && isgraphics(axs(4))
-                axes(axs(4))
-                axs(4).Visible = 'off';
-                if pv.showMissed
-                    m =   cat(3,sortResults(1).meanMissedWF(25:45,:),sortResults(2).meanMissedWF(25:45,:));
-                    sd = cat(3,sortResults(1).sdMissedWF(25:45,:),sortResults(2).sdMissedWF(25:45,:));
-                else
-                    m =   cat(3,sortResults(1).meanWF(25:45,:),sortResults(2).meanWF(25:45,:));
-                    sd = cat(3,sortResults(1).sdWF(25:45,:),sortResults(2).sdWF(25:45,:));
-                end
-
-                plotWaveformPhase(sortResults(1).binCenters, m,sd,...
-                    'ax',axs(4),'UseBins',1:2:pv.nrPhaseBins, ...
-                    'radius',0.25,'width',0.4,'height',0.4, ...
-                    'colors',colors);
-            end
-
-            if pv.exportFig
-                name = sprintf('%s.png',pv.tag);
-                exportgraphics(f,fullfile('../docs/',name),"Colorspace",'rgb','ContentType','vector','Resolution',600);
-            end
-
-            % Summarize results on the command line
-            trueNrSpikes = numel(sortResults(1).found); % Same for both
-            falsePositives = 100*[sum(sortResults(1).invented) ;sum(sortResults(2).invented)]/trueNrSpikes;
-            falseNegatives = 100*[sum(~sortResults(1).found) ;sum(~sortResults(2).found)]/trueNrSpikes;
-            fprintf('False Positive. Sham: %.0f%%  tACS: %.0f%% \n',falsePositives(1),falsePositives(2))
-            fprintf('False Negative. Sham: %.0f%%  tACS: %.0f%% \n',falseNegatives(1),falseNegatives(2))
-            fprintf('PLV. Sham: %.2f  tACS: %.2f \n',sqrt(max(0,sortResults(1).ppc)),sqrt(max(0,sortResults(2).ppc)))
-            fprintf('PLV2. Sham: %.2f  tACS: %.2f \n',sqrt(max(0,sortResults(1).ppc2)),sqrt(max(0,sortResults(2).ppc2)))
-
-        end
-
-
-
+       
+      
         function [results,spikes] = sortSpikes(o, vClean,pv)
             % [results,spikes] = sortSpikes(o, vClean,pv)
             % Simulate a typical spike sorting pipelinw.
