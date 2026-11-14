@@ -4,8 +4,8 @@
 %%
 %[text] %[text:anchor:H_9BC26763] ## Setup Simulation
 %[text] Simulation parameters
-startup; % Make sure all toolboxes are on the path
-clear spkDefaults arDefaults % Avoid lingering values from prevoous runs
+run('../startup'); % Make sure all toolboxes are on the path
+defaults= []
 spkDefaults.duration                  = 120;    % 2 min
 spkDefaults.stimulatorSamplingRate    = 1e3;     % e.g., Starstim (1 kHz)
 spkDefaults.currentResolution         = 1e-6;    % 1 muA

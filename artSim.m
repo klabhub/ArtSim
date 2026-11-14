@@ -270,6 +270,14 @@ classdef artSim < handle
             fprintf('Using %.1f s of %s data.\n',o.duration, pv.format);
         end
 
+        function sim(o)
+            % Shortcut for the typical steps in a simulation.
+            o.rng               % Reset rng if .reproducible
+            o.reset;            % Start fresh
+            o.simLfp;           % 1. Generate LFP/EEG .
+            o.simTCS;           % 2. Generate the TCS voltage
+            o.simRecording;     % 3. Simulate recording
+        end
         function simLfp(o)
             % simLfp - Simulate the Local Field Potential
             % LFPs can be single sinusoids (lfpPeakWidth =0) with
@@ -763,8 +771,10 @@ classdef artSim < handle
                 pv.legend (1,1) logical = true;
             end
 
-            if isfield(prms,'tacsFrequency') && prms.tacsFrequency ~=o.tacsFrequency
-                fprintf("Frequency in the simulation (%.2f) does not match the frequency in the ar (%.2f)\n",o.tacsFrequency,prms.tacsFrequency)
+            if isfield(prms,'common') && isfield(prms.common,'tacsFrequency') && ...
+                    prms.common.tacsFrequency ~= o.tacsFrequency
+                fprintf("Frequency in the simulation (%.2f) does not match the frequency in the ar (%.2f)\n", ...
+                    o.tacsFrequency,prms.common.tacsFrequency)
             end
             %% Initialize the simulation , simulate the recording, then perform artifact removal.
             o.rng               % Reset rng if .reproducible
@@ -773,12 +783,34 @@ classdef artSim < handle
             o.simTCS;          % 2. Generate the TCS voltage
             o.simRecording;      % 3. Simulate recording
             % Now run artifact removal
-            prms.groundTruth = o.vTruth;
-            prms.vRecordTcs = o.vRecordTcs;
-            prms.recordingSamplingRate  = o.recordingSamplingRate;
-            prms.mode=cellstr(arMode);
-            prms = namedargs2cell(prms);
-            [vRecovered,results] = artifactRemoval(o.vContaminated,prms{:});
+            available = {};
+            if isfield(prms,'steps')
+                available = prms.steps;
+                if isstruct(available)
+                    available = num2cell(available);
+                end
+            end
+            selectedSteps = cell(1,numel(arMode));
+            for k = 1:numel(arMode)
+                options = struct;
+                for j = 1:numel(available)
+                    candidate = available{j};
+                    if isstruct(candidate) && isfield(candidate,'name') && ...
+                            strcmpi(string(candidate.name),string(arMode(k)))
+                        if isfield(candidate,'options')
+                            options = candidate.options;
+                        end
+                        break
+                    end
+                end
+                selectedSteps{k} = struct('name',char(arMode(k)),'options',options);
+            end
+            [vRecovered,results] = artifactRemoval(o.vContaminated,selectedSteps{:}, ...
+                segmentDuration=prms.common.segmentDuration, ...
+                tacsFrequency=o.tacsFrequency, ...
+                recordingSamplingRate=o.recordingSamplingRate, ...
+                groundTruth=o.vTruth, ...
+                vRecordTcs=o.vRecordTcs);
 
             %% Analyze the power spectrum
             [pwr,frequency] = pspectrum([o.vTruth vRecovered o.vContaminated ],o.recordingSamplingRate,'FrequencyLimits',[pv.lowCutOff pv.highCutOff],'FrequencyResolution',pv.freqRes);
@@ -862,7 +894,9 @@ classdef artSim < handle
                 if  numel(axs)>=2 && isgraphics(axs(2))
                     axes(axs(2)) % Spectrum
                     yyaxis left  % Truth and recovered signal (small
-                    h = plot(frequency,amplitude(:,[1 2])./1e-6,'LineWidth',1,'LineStyle','-');
+                    x = frequency;
+                    y= amplitude(:,[1 2])./1e-6;
+                    h = plot(x(1:10:end),y(1:10:end,:),'LineWidth',1,'LineStyle','-');
                     ylabel 'Amplitude (\muV)'
                     hold on
                     ax =gca;
@@ -874,7 +908,7 @@ classdef artSim < handle
                     h(1).Color = 'r';
                     h(2).Color = 'g';
                     h(3).Color = 'b';
-                    h(1).LineWidth =2;
+                    h(1).LineWidth =pv.lineWidth;
                     plot(xlim,zeros(1,2),'k-')
 
                     if ~isgraphics(axs(1))  && pv.legend
@@ -948,13 +982,34 @@ classdef artSim < handle
 
 
             %% Run artifact removal
-            prms.groundTruth = o.vTruth;
-            prms.tacsFrequency  = o.tacsFrequency;
-            prms.vRecordTcs = o.vRecordTcs;
-            prms.recordingSamplingRate  = o.recordingSamplingRate;
-            prms.mode=cellstr(arMode);
-            prms = namedargs2cell(prms);
-            [vRecovered] = artifactRemoval(o.vContaminated,prms{:});
+            available = {};
+            if isfield(prms,'steps')
+                available = prms.steps;
+                if isstruct(available)
+                    available = num2cell(available);
+                end
+            end
+            selectedSteps = cell(1,numel(arMode));
+            for k = 1:numel(arMode)
+                options = struct;
+                for j = 1:numel(available)
+                    candidate = available{j};
+                    if isstruct(candidate) && isfield(candidate,'name') && ...
+                            strcmpi(string(candidate.name),string(arMode(k)))
+                        if isfield(candidate,'options')
+                            options = candidate.options;
+                        end
+                        break
+                    end
+                end
+                selectedSteps{k} = struct('name',char(arMode(k)),'options',options);
+            end
+            [vRecovered] = artifactRemoval(o.vContaminated,selectedSteps{:}, ...
+                segmentDuration=prms.common.segmentDuration, ...
+                tacsFrequency=o.tacsFrequency, ...
+                recordingSamplingRate=o.recordingSamplingRate, ...
+                groundTruth=o.vTruth, ...
+                vRecordTcs=o.vRecordTcs);
 
             %% Sort spikes
             [sortResults,spikes] =sortSpikes(o,vRecovered,...
@@ -1369,5 +1424,6 @@ classdef artSim < handle
             y= gain.*sX.*(aX./(1+(aX./range).^n).^(1/n));
             saturationPoint = ((100/pv.satLevel)^n-1)^(1/n)*range;
         end
+
     end
 end

@@ -1,11 +1,10 @@
 %[text] # Spike Exploration
 %[text] spikeArtifacts.mlx illustrates specific issues in the analysis of extracellular recordings. This script builds on that to explore some additional parameter dependencies.
-%[text:tableOfContents]{"heading":"**Table of Contents**"}
+%[text:tableOfContents]{"heading":"Table of Contents"}
 %[text] 
-%%
 %[text] %[text:anchor:H_9BC26763] ## Setup Simulation
 %[text] Simulation parameters
-startup; % Make sure all toolboxes are on the path
+run('../startup'); % Make sure all toolboxes are on the path
 clear spkDefaults arDefaults % Avoid lingering values from prevoous runs
 spkDefaults.duration                  = 120;    % 2 min
 spkDefaults.stimulatorSamplingRate    = 1e3;     % e.g., Starstim (1 kHz)

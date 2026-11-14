@@ -1,89 +1,89 @@
-function [f,ax] = fig(varargin)
+function [f,ax] = fig(pv)
 % Generate a figure matching publisher requirements.
 
-defaultColorOrder = [   0.6350    0.0780    0.1840
-    0.4660    0.6740    0.1880
-    0.9290    0.6940    0.1250
-    0    0.4470    0.7410
-    0.3010    0.7450    0.9330
-    0.4940    0.1840    0.5560
-    0.8500    0.3250    0.0980];
-
-p=inputParser;
-p.addParameter('paperCols',1,@(x) (ismember(x,[1 1.5 2])));
-p.addParameter('byColumn',false,@islogical);
-p.addParameter('nrCols',1);
-p.addParameter('nrRows',1);
-p.addParameter('height',NaN);
-p.addParameter('name','');
-p.addParameter('colorOrder',defaultColorOrder);
-p.addParameter('span',{});
-p.parse(varargin{:});
+arguments
+    pv.paperCols (1,1) double {mustBeMember(pv.paperCols,[1 1.5 2])} = 1
+    pv.byColumn (1,1) logical = false
+    pv.nrCols (1,1) double = 1
+    pv.nrRows (1,1) double = 1
+    pv.height (1,1) double = NaN
+    pv.name = ''
+    pv.colorOrder (:,3) double = [0.6350 0.0780 0.1840
+                                   0.4660 0.6740 0.1880
+                                   0.9290 0.6940 0.1250
+                                   0.0000 0.4470 0.7410
+                                   0.3010 0.7450 0.9330
+                                   0.4940 0.1840 0.5560
+                                   0.8500 0.3250 0.0980]
+    pv.span = {}
+end
 
 
 %% Set Defaults
-set(groot,'defaultAxesFontSize',8)
+set(groot,'defaultAxesFontSize',6)
 set(groot,'defaultAxesFontName','Arial');
-set(groot,'defaultAxesLineWidth',0.5);
+set(groot,'defaultAxesLineWidth',1);
 
 
 %% Find or create the figure
-f = findall(0,'type','figure','Name',p.Results.name);
+f = findall(0,'type','figure','Name',pv.name);
 if ~isempty(f)
     close(f)
 end
 
 f =figure;
 
-
-
-switch (p.Results.paperCols)
+switch (pv.paperCols)
     case 1
-        width = 7.68;
+        width = 8.8;
     case 1.5
-        width = 9.94;
-    case 2
         width = 13.2;
+    case 2
+        width = 18;
 end
-if isnan(p.Results.height)
+if isnan(pv.height)
     height = width;
 else
-    height = p.Results.height;
+    height = pv.height;
 end
 clf(f,"reset");
-f.Name = p.Results.name;
+f.Name = pv.name;
 f.Units= 'centimeters';
 f.Position = [f.Position(1:2) width height];
 f.PaperPosition= [f.PaperPosition(1:2) width height];
 
 figure(f);
 %% Create the axes
-if isempty(p.Results.span)
-    nrSubs = p.Results.nrRows*p.Results.nrCols;
+if isempty(pv.span)
+    nrSubs = pv.nrRows*pv.nrCols;
 else
-    nrSubs = numel(p.Results.span);
+    nrSubs = numel(pv.span);
 end
-layout = tiledlayout(p.Results.nrRows,p.Results.nrCols); %#ok<NASGU>
+layout = tiledlayout(pv.nrRows,pv.nrCols); %#ok<NASGU>
+ax = gobjects(1,nrSubs);
 for i =1:nrSubs
-    if isempty(p.Results.span)
+    if isempty(pv.span)
         ax(i)=nexttile;
     else
-        ax(i)=nexttile(p.Results.span{i}(1),p.Results.span{i}(2:3));
+        ax(i)=nexttile(pv.span{i}(1),pv.span{i}(2:3));
     end
     cla(ax(i));
-    set(ax(i),'ColorOrder',p.Results.colorOrder);
+    set(ax(i),'ColorOrder',pv.colorOrder);
     hold on;
 end
 
-if isempty(p.Results.span)
-ax = reshape(ax,[p.Results.nrRows p.Results.nrCols]);
-if p.Results.byColumn
-    ax= ax';
+if isempty(pv.span)
+ax = reshape(ax,[pv.nrCols pv.nrRows])';
 end
-end
+% Create labels
 for i=1:nrSubs
     if nrSubs>1
-        thisPos = ax(i).Position;
+        if pv.byColumn
+            tmpAx= ax'; % Label first colum a ,b,c etc.
+        else
+            tmpAx = ax; % Label first row a,b,c
+        end
+        thisPos = tmpAx(i).Position;
         thisPos(1) = max(0,thisPos(1) - 0.35*thisPos(3));
         thisPos(2) = thisPos(2) + 0.95*thisPos(4);
         thisPos(3) = 0.1;

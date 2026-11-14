@@ -1,8 +1,8 @@
-function [vClean ,results] = artifactRemoval(v,pv)
-% This function returns a cleaned up signal (vClean) following one or more
-% artifact removal steps. 
+function [results] = artifactRemoval(v,step,common)
+% This function performs one or more artifact removal steps on a voltage v
+% and returns the cleaned signal in results.vClean. 
 %
-% Briefly, there are the following steps (modes): (more details below)
+% The steps can be any combination of the following: (more details per step below)
 % 'NOP' - no artifact removal. 
 % 'NOTCH' - notch filtering
 % 'RBAR' - regression based artifact removal
@@ -10,21 +10,29 @@ function [vClean ,results] = artifactRemoval(v,pv)
 % 'FASTR' - Niazy et al algorithm as implemented in eegLab
 % 'TC' - Time slice correction
 % 'MEANREMOVAL' - remove the mean
-%  'PCA'   - Use PCA to keep only some of the components.
+% 'PCA'   - Use PCA to keep only some of the components.
 % 'ANC-SEGMENT','ANC-ARTIFACT','ANC-REFERENCE' - Adaptive noise
 %                   cancellation based on different models of the noise. 
 % INPUT
 % v = raw signal (assumed to be in volts) from which artifacts are to be removed.
-% 'tacsFrequency' - Frequency of the tACS signal. It is assumed that tACS
-% is applied for the duration of the signal v.
-% 'segementDuration'   - For some artifact removal methods, the signal is divided
-%               into segments.
-% 'mode' - Cell array specifying which artifact removal algorithms to run
-% (they will be executed in the specified order). For instance, the alogrithm
-% in the Niazy et al paper (below) is approximated by: {'TC','MEANREMOVAL','PCA','ANC-ARTIFACT'}. 
+% step - Repeating scalar structs with a name field specifying the mode 
+%         and mode specific options. Steps are executed in the order in which they are passed.
+% The steps can be followed by named arguments that are used by all steps
+%     segmentDuration - The recording is divided into segments of this length [s]
+%     tacsFrequency    - The frequency of a tACS signal that contaminated v
+%     recordingSamplingRate  - Sampling rate of the recording device
+%     groundTruth  - Ground truth. If known this can be used to obtain some performance measures
+%     vRecordTcs - A record of the applied voltage. Used
+%                                   by RBAR to regress out the artifact, and by 
+%                                       PCA as an extra basis function.
+%     graph   - Show a graphical summary of the results
+%    showTime  - Seconds of the signal to show in the graph.
+% OUTPUT
+%  A struct with fields:
+% .signal  - The recovered/cleaned signal
+% .common  - The common parameters
+% .step  - The steps that were applied
 % 
-% Each mode has (partially overlapping) parameters, which are specified as parm/value
-% pairs.
 %% Mode: TC
 %'Time Correction; If the event causing artifacts does not occur at
 % regular times, Time Correction adjusts the segments used by MEANREMOVAL
@@ -151,49 +159,36 @@ function [vClean ,results] = artifactRemoval(v,pv)
 % Niazy, R. K., Beckmann, C. F., Iannetti, G. D., Brady, J. M. & Smith, S. M.
 % Removal of FMRI environment artifacts from EEG data using optimal basis sets. Neuroimage 28, 720�737 (2005).
 
-
 arguments
     v (:,:) double
-    pv.mode (1,:) cell {mustBeMember(pv.mode,{'NOP','NOTCH','RBAR','FBAR','FASTR','TC','MEANREMOVAL','PCA','ANC-SEGMENT','ANC-ARTIFACT','ANC-REFERENCE'})} = {}
-    pv.segmentDuration (1,1) double = 3
-    pv.tacsFrequency (1,1) double = NaN
-    pv.frequencyLimits (1,2) double = [0 0]
-    pv.autocorrelationWindow (1,1) double = 0
-    pv.recordingSamplingRate (1,1) double = 30e3
-    pv.slack (1,1) double = 2e-3
-    pv.nrSegsPerWindow (1,1) double = 9
-    pv.slide (1,1) logical = true
-    pv.pcaVarExplained (1,1) double = 75
-    pv.pcaNr = Inf
-    pv.pcaZ (1,1) double = -inf
-    pv.pcaFastrUseSlice (1,1) logical = false
-    pv.pcaNrSegsPerWindow (1,1) double = inf
-    pv.nrPCA (1,1) double = Inf
-    pv.ancReference (:,1) double = []
-    pv.ancN = []
-    pv.ancOnline (1,1) logical = false
-    pv.ancMu (1,1) double = 0.05
-    pv.graph (1,1) logical = false
-    pv.showTime (1,1) double = 2
-    pv.groundTruth (:,:) double = []
-    pv.vRecordTcs (:,:) double = []
-    pv.referenceSegment = 1
+end
+arguments (Repeating)
+    step (1,1) struct
+end
+arguments
+    common.segmentDuration (1,1) double = 3
+    common.tacsFrequency (1,1) double = NaN
+    common.recordingSamplingRate (1,1) double = 30e3
+    common.groundTruth (:,:) double = []
+    common.vRecordTcs (:,1) double = []
+    common.graph (1,1) logical = false
+    common.showTime (1,1) double = 2
 end
 
-
-doQC = ~isempty(pv.groundTruth);
+steps = normalizeSteps(step);
+doQC = ~isempty(common.groundTruth);
 
 nrSamples = size(v,1);
-samplingRate= pv.recordingSamplingRate;
-if pv.tacsFrequency>0 
-    nrCycles = pv.segmentDuration*pv.tacsFrequency;
+samplingRate= common.recordingSamplingRate;
+if common.tacsFrequency>0 
+    nrCycles = common.segmentDuration*common.tacsFrequency;
     if nrCycles~=round(nrCycles)
      fprintf(2,'Non-integer number of cycles per segment (%.2f).\n',nrCycles)
     end
 else
     nrCycles = 1;
 end
-nrSamplesPerSegment =  pv.segmentDuration*samplingRate;
+nrSamplesPerSegment =  common.segmentDuration*samplingRate;
 if nrSamplesPerSegment~=round(nrSamplesPerSegment)
     fprintf(2,'Non-integer number of samples per segment (%.2f).\n',nrSamplesPerSegment)
 end
@@ -210,13 +205,11 @@ segmentStart=nrPad+round(1+(0:nrSegments-1)*nrSamplesPerSegment);
 [vSegmented,isPadded,nrPre,nrPost] = segment(v,segmentStart);
 
 
-if ~isempty(pv.vRecordTcs)
-    vTacsRecord = segment(pv.vRecordTcs,segmentStart);
-else
-    vTacsRecord = [];
+if ~isempty(common.vRecordTcs)
+    common.vRecordTcs = segment(common.vRecordTcs,segmentStart);
 end
 if doQC
-    groundTruth = pv.groundTruth;
+    groundTruth = common.groundTruth;
 end
 
 vClean =vSegmented; % Start from the raw segmented.
@@ -231,13 +224,14 @@ if doQC
         fprintf('********QC********* \n Starting Values: MSE = %3.3g muV , r= %3.3f\n',mse,r);
     end
 end
-modes = pv.mode;
+modes = cellfun(@(step) char(step.name),steps,'UniformOutput',false);
 nrModes = numel(modes);
 filterToPlot = cell(1,nrModes);
 artifactToPlot = cell(1,nrModes);
 
-fourierFreq = pv.tacsFrequency;
+fourierFreq = common.tacsFrequency;
 for m=1:nrModes
+    opt = stepOptions(steps{m});
     modeName = matlab.lang.makeValidName(modes{m});
     switch upper(modes{m})
         case 'NOP'
@@ -248,14 +242,14 @@ for m=1:nrModes
                 error('TC should be applied first.')
             end
 
-            slackSamples = floor(pv.slack*samplingRate);
-            if slackSamples > 0.5*ceil(samplingRate/pv.tacsFrequency)
+            slackSamples = floor(opt.slack*samplingRate);
+            if slackSamples > 0.5*ceil(samplingRate/common.tacsFrequency)
                 error('This much slack will lead to shifts larger than one cycle of tACS');
             end
-            if strcmpi(pv.referenceSegment,'mean')
+            if strcmpi(opt.referenceSegment,'mean')
                 reference = mean(vClean,2,'omitnan');
             else
-                reference = mean(vClean(:,pv.referenceSegment),2,'omitnan');
+                reference = mean(vClean(:,opt.referenceSegment),2,'omitnan');
             end
             unSegmentedVClean = unSegment(vClean,isPadded,nrPre,nrPost);
             shift = nan(1,nrSegments);
@@ -278,11 +272,11 @@ for m=1:nrModes
                 results.tcShift= shift;
             end
         case 'FBAR'
-            vClean = FBAR(vClean,pv.tacsFrequency,samplingRate,pv.frequencyLimits);
+            vClean = FBAR(vClean,common.tacsFrequency,samplingRate,opt.frequencyLimits);
         case 'RBAR'
-            vClean = RBAR(vClean,vTacsRecord);
+            vClean = RBAR(vClean,common.vRecordTcs);
         case 'NOTCH'
-            d = fdesign.notch('N,F0,Q,Ast',500,pv.tacsFrequency,20,100,samplingRate);
+            d = fdesign.notch('N,F0,Q,Ast',500,common.tacsFrequency,20,100,samplingRate);
             notch =design(d,'SystemObject',true);
             vClean = notch(unSegment(vClean,isPadded,nrPre,nrPost));
             vClean = segment(vClean,segmentStart);
@@ -290,8 +284,8 @@ for m=1:nrModes
             % To include only segments where the underlying neural signal is assumed to
             % be uncorrelated; adjacent artifacts are not used but one or more are
             % skipped (step), depending on the assumed autocorrelationWindow
-            step = 1+ceil(pv.autocorrelationWindow*samplingRate/nrSamplesPerSegment);
-            halfWindow = pv.nrSegsPerWindow;
+            step = 1+ceil(opt.autocorrelationWindow*samplingRate/nrSamplesPerSegment);
+            halfWindow = opt.nrSegsPerWindow;
             meanArtifact = nan(size(vClean));
             removeMeanPerSeg = 0 ; % Set this to true to regress out the mean of each segment too. Not recommended (depending on the nrCycles used, this will also remove low frequency signals)
             scale = nan(1+removeMeanPerSeg,nrSegments);
@@ -311,9 +305,9 @@ for m=1:nrModes
                 stay = ~isnan(thisSegment);
                 % Average over the artifact segments (vClean can have nans near the
                 % edges)
-                if pv.slide
+                if opt.slide
                     % Sliding window
-                    nrSamplesPerCycle = round(samplingRate/pv.tacsFrequency);
+                    nrSamplesPerCycle = round(samplingRate/common.tacsFrequency);
                     % Determine the mean artifact for each cycle within the
                     % window (i.e. ignoring the nrCycles that make up a segment)
                     singeCycleArtifact = mean(reshape(vClean(1:nrSamplesPerCycle*nrCycles,keep),nrSamplesPerCycle,[]),2,'omitnan');
@@ -346,8 +340,8 @@ for m=1:nrModes
             end
 
         case 'PCA'
-            halfPCAWindow = min(pv.pcaNrSegsPerWindow,nrSegments);
-            step = 1+ceil(pv.autocorrelationWindow/1000*samplingRate/nrSamplesPerSegment);
+            halfPCAWindow = min(opt.pcaNrSegsPerWindow,nrSegments);
+            step = 1+ceil(opt.autocorrelationWindow/1000*samplingRate/nrSamplesPerSegment);
             pcaArtifact =zeros(size(vClean));
             cumVarExplained = zeros(1,nrSegments);
             nrPC = zeros(1,nrSegments);
@@ -368,8 +362,8 @@ for m=1:nrModes
                 keep = setdiff(keep,hasNan); % Remove segements with NaN (=padding)
                 % Extract these artifacts surrounding the current segment
                 artifactsForBasis =vClean(:,keep);
-                if ~isempty(vTacsRecord)
-                    artifactsForBasis = cat(2,artifactsForBasis,mean(vTacsRecord(:,keep),2,'omitnan'));
+                if ~isempty(common.vRecordTcs)
+                    artifactsForBasis = cat(2,artifactsForBasis,mean(common.vRecordTcs(:,keep),2,'omitnan'));
                 end
                 % Remove means from rows(samples) and columns (segments)
                 % artifactsForBasis= artifactsForBasis-repmat(mean(artifactsForBasis),[nrSamplesPerSegment 1]) -repmat(mean(artifactsForBasis,2,'omitnan'),[1 numel(keep)]);
@@ -377,9 +371,9 @@ for m=1:nrModes
                 % segment
                 [basis,~,~,~,varExplained] = pca(artifactsForBasis','Centered',false);
                 % Selection
-                lastPC = find(zscore(varExplained)>pv.pcaZ,1,'last');
-                lastPC = min(lastPC,find(cumsum(varExplained)<pv.pcaVarExplained,1,'last'));
-                lastPC = min(lastPC,pv.pcaNr);
+                lastPC = find(zscore(varExplained)>opt.pcaZ,1,'last');
+                lastPC = min(lastPC,find(cumsum(varExplained)<opt.pcaVarExplained,1,'last'));
+                lastPC = min(lastPC,opt.pcaNr);
                 if ~isempty(lastPC)
                     cumVarExplained(s) = sum(varExplained(1:lastPC));
                     nrPC(s) = lastPC;
@@ -413,14 +407,14 @@ for m=1:nrModes
                     reference = zeros(nrSamples,1);
                     reference(segmentStart) =1;
                     % One coefficient for each time point in the segment
-                    N = round(samplingRate.*(nrCycles/pv.tacsFrequency))-1;
+                    N = round(samplingRate.*(nrCycles/common.tacsFrequency))-1;
                 case 'ANC-ARTIFACT'
                     % Apply ANC to the artifact that has been estimated so
                     % far.
                     if all(totalArtifact==0)
                         N=0;
                     else
-                        N = round(nrCycles.*samplingRate./pv.tacsFrequency)-1;
+                        N = round(nrCycles.*samplingRate./common.tacsFrequency)-1;
                         x = unSegment(vClean,isPadded,nrPre,nrPost);
                         y = unSegment(totalArtifact,isPadded,nrPre,nrPost);
                         reference = ((x'*y)./(y'*y))*y;
@@ -428,11 +422,11 @@ for m=1:nrModes
                 case 'ANC-REFERENCE'
                     % This ANC variant uses a reference [nrSamples 1] provided by the caller. In principle, the caller
                     %  can specify any reference here to remove dataq that correlate with this reference from the signal.
-                    N =   pv.ancN;
-                    reference =pv.ancReference./max(abs(pv.ancReference));
+                    N =   opt.ancN;
+                    reference =opt.ancReference./max(abs(opt.ancReference));
             end
             if N>0
-                [vClean,ancNoise,ancFilter]=anc(reference,unSegment(vClean,isPadded,nrPre,nrPost),N,pv.ancMu,[],pv.ancOnline);
+                [vClean,ancNoise,ancFilter]=anc(reference,unSegment(vClean,isPadded,nrPre,nrPost),N,opt.ancMu,[],opt.ancOnline);
                 totalArtifact = totalArtifact+ segment(ancNoise,segmentStart);
                 vClean= segment(vClean,segmentStart);
                 filterToPlot{m} = ancFilter;
@@ -471,29 +465,31 @@ for m=1:nrModes
             % Low-pass filter cut-off. Applied after mean removal and PCA, before ANC.
             % With this set to 0 (no filter) ANC will take a long time, but
             % at least we see the full result.
-            lpf = 0;
-            L = 1;  % "Interpolation folds" = upsampling. We are already at 10kHz so not needed.
-            Window = 2*pv.nrSegsPerWindow; % Number of segments to average for one template.            
+            lpf = 0; %#ok<NASGU>
+            L = 1; %#ok<NASGU>  % "Interpolation folds" = upsampling. We are already at 10kHz so not needed.
+            Window = 2*opt.nrSegsPerWindow; %#ok<NASGU> % Number of segments to average for one template.
             % The realignment algorithm needs time before the first and after the last
             % trigger to work.
             pad = zeros(1,nrSamplesPerSegment); %
             nrPad = numel(pad);
-            Trigs =nrPad+(1:nrSamplesPerSegment:nrSamples);
+            Trigs =nrPad+(1:nrSamplesPerSegment:nrSamples); %#ok<NASGU>
             EEG.data = [pad EEG.data pad];
-            strig = pv.pcaFastrUseSlice; % 1= slice triggers (0 =volume triggers)
-            anc_chk = pv.ancOnline; % Do ANC or not
-            tc_chk = 0;  % Option to correct missing triggers. Not relevant
-            Volumes =[];  % Only used to correct missing triggers
-            Slices = [];  % Only used to correct missing triggers
+            strig = opt.pcaFastrUseSlice; %#ok<NASGU> % 1= slice triggers (0 =volume triggers)
+            anc_chk = opt.ancOnline; %#ok<NASGU> % Do ANC or not
+            tc_chk = 0; %#ok<NASGU>  % Option to correct missing triggers. Not relevant
+            Volumes =[]; %#ok<NASGU>  % Only used to correct missing triggers
+            Slices = []; %#ok<NASGU>  % Only used to correct missing triggers
             % The realignment slack is coded as a fraction of the time
             % between triggers:
-            pre_frac =pv.slack/(nrSamplesPerSegment/samplingRate);
-            noObsChannels =[];  % Channels to exclude from PCA (none here)
+            pre_frac =opt.slack/(nrSamplesPerSegment/samplingRate); %#ok<NASGU>
+            noObsChannels =[]; %#ok<NASGU>  % Channels to exclude from PCA (none here)
             % 0 = no PCA, 'auto' = determine number of PC based on data, n= use this number of components.
-            nrPCA =pv.pcaNr;
+            nrPCA =opt.pcaNr; %#ok<NASGU>
 
             %% Now call the original code
-            results = fmrib_fastr(EEG,lpf,L,Window,Trigs,strig,anc_chk,tc_chk,Volumes,Slices,pre_frac,noObsChannels,nrPCA);
+            % The external FASTR implementation writes progress text to the
+            % command window. Capture that output while preserving errors.
+            evalc('results = fmrib_fastr(EEG,lpf,L,Window,Trigs,strig,anc_chk,tc_chk,Volumes,Slices,pre_frac,noObsChannels,nrPCA);');
             [vClean,isPadded,nrPre,nrPost] = segment(results.data(nrPad+1:end-nrPad)',segmentStart);
             filterToPlot{m} = 0;
             artifactToPlot{m} = zeros(nrSamples,1);
@@ -518,18 +514,18 @@ for m=1:nrModes
 
 end
 
-if nargout>1
-    results.modes= modes;
-    results.artifacts = artifactToPlot;
-    results.filters= filterToPlot;
-end
-
 %Reshape to the original size.
 vClean = unSegment(vClean,isPadded,nrPre,nrPost);
 assert(numel(vClean)==nrSamples,'Losing samples...');
 
+results.signal = vClean;
+results.step = step;
+results.common = common;
+results.artifacts = artifactToPlot;
+results.filters= filterToPlot;
+
 %% Show results 
-if pv.graph
+if common.graph
     plotModes= find(~cellfun(@isempty,artifactToPlot));
     clf;
     t = (0:nrSamples-1)/samplingRate;
@@ -542,7 +538,7 @@ if pv.graph
     end
     xlabel 'Time (s)'
     ylabel 'Voltage (mV)'
-    xlim([0 pv.showTime]);
+    xlim([0 common.showTime]);
     title 'Artifact (mV)'
     legend(modes(plotModes))
 
@@ -570,12 +566,82 @@ if pv.graph
     end
     xlabel 'Time (s)'
     ylabel 'Voltage (mV)'
-    xlim([0 pv.showTime]);
+    xlim([0 common.showTime]);
     title 'Recorded and cleaned signal'
 end
 end
 
 %% Helper functions
+function steps = normalizeSteps(steps)
+%NORMALIZESTEPS Validate and canonicalize the repeating step inputs.
+
+validModes = {'NOP','NOTCH','RBAR','FBAR','FASTR','TC', ...
+    'MEANREMOVAL','PCA','ANC-SEGMENT','ANC-ARTIFACT','ANC-REFERENCE'};
+for m = 1:numel(steps)
+    thisStep = steps{m};
+    if ~isfield(thisStep,'name')
+        error('artifactRemoval:InvalidStep', ...
+            'Each step must contain a name field.');
+    end
+    thisStep.name = upper(char(string(thisStep.name)));
+    if ~ismember(thisStep.name,validModes)
+        error('artifactRemoval:UnknownMode', ...
+            'Unknown artifact removal mode %s.',thisStep.name);
+    end
+    if ~isfield(thisStep,'options') || isempty(thisStep.options)
+        thisStep.options = struct;
+    elseif ~isstruct(thisStep.options) || ~isscalar(thisStep.options)
+        error('artifactRemoval:InvalidStepOptions', ...
+            'The options field for step %d must be a scalar struct.',m);
+    end
+    steps{m} = thisStep;
+end
+end
+
+function options = stepOptions(step)
+%STEPOPTIONS Apply defaults for one artifact-removal step.
+
+options = step.options;
+switch step.name
+    case 'TC'
+        options = setDefault(options,'slack',2e-3);
+        options = setDefault(options,'referenceSegment',1);
+    case 'FBAR'
+        options = setDefault(options,'frequencyLimits',[0 0]);
+    case 'MEANREMOVAL'
+        options = setDefault(options,'autocorrelationWindow',0);
+        options = setDefault(options,'nrSegsPerWindow',9);
+        options = setDefault(options,'slide',true);
+    case 'PCA'
+        options = setDefault(options,'pcaVarExplained',75);
+        options = setDefault(options,'pcaNr',Inf);
+        options = setDefault(options,'pcaZ',-Inf);
+        options = setDefault(options,'pcaNrSegsPerWindow',Inf);
+        options = setDefault(options,'autocorrelationWindow',0);
+    case {'ANC-SEGMENT','ANC-ARTIFACT'}
+        options = setDefault(options,'ancMu',0.05);
+        options = setDefault(options,'ancOnline',false);
+    case 'ANC-REFERENCE'
+        options = setDefault(options,'ancReference',[]);
+        options = setDefault(options,'ancN',[]);
+        options = setDefault(options,'ancMu',0.05);
+        options = setDefault(options,'ancOnline',false);
+    case 'FASTR'
+        options = setDefault(options,'slack',2e-3);
+        options = setDefault(options,'nrSegsPerWindow',9);
+        options = setDefault(options,'pcaFastrUseSlice',false);
+        options = setDefault(options,'ancOnline',false);
+        options = setDefault(options,'pcaNr',Inf);
+end
+
+end
+
+function s = setDefault(s,name,value)
+if ~isfield(s,name)
+    s.(name) = value;
+end
+end
+
 function v=unSegment(v,isPadded,nrPre,nrPost)
 v=[zeros(nrPre,1);v(~isPadded);zeros(nrPost,1)];
 end
