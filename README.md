@@ -55,6 +55,6 @@ steps of 2* length of a segment (i.e. skipping one ), when using volume-triggers
 
 3. When using volume-triggers (but not with slice-triggers), the code regresses out the mean (per segment).
 
-## Developers 
+## Developers
 
 The `/test` folder has a unit test suite. When extending the toolbox, use `run('test/runAllTests.m')` to run them all and confirm that the code still generates the same outputs.
