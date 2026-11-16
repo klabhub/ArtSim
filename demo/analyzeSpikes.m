@@ -48,11 +48,11 @@ function [sortResults,falsePositives,falseNegatives,spikes,vRecovered] = analyze
             for i=1:2
                 if isgraphics(axs(i))
                     axes(axs(i)); %#ok<LAXES>
-                    h0= plot(o.tRecord,sortResults(i).voltage/(o.adcGain*1e-6),'LineWidth',0.5);
+                    h0= plot(o.tRecord,sortResults(i).voltage/(o.amplifierGain*1e-6),'LineWidth',0.5);
                     h1 = plot(o.tSimulate(o.ixSpike),zeros(size(o.ixSpike)),'go','MarkerSize',7); % Ground truth
                     h2= plot(o.tRecord(sortResults(i).ixDetected),zeros(size(sortResults(i).ixDetected)),'g*','MarkerSize',7);
                     ylim(o.spikePeak/1e-6*[-1 1])
-                    plot(pv.xlim,spikes.info.detect.thresh(min(i,numel(spikes.info.detect.thresh)))/(o.adcGain*1e-6)*[1 1],'k')
+                    plot(pv.xlim,spikes.info.detect.thresh(min(i,numel(spikes.info.detect.thresh)))/(o.amplifierGain*1e-6)*[1 1],'k')
                     xlabel 'Time (s)'
                     ylabel ('Filtered Voltage (\muV)')
                     if i==1

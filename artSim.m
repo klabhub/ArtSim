@@ -66,20 +66,22 @@ classdef artSim < handle
         pinkNoise                 = true;     % Set to true to generate pink noise (white otherwise)
         multiplicative            = 0;        % Standard deviation of the multiplicative noise
 
-        %% Properties of the pream and ADC converter.
-        % The default values specify a unity gain amplifier with a linear
-        % response over +/- 100 mV.
-        amplifierGain             = 1;         % Preamp gain. 
-        adcLinearRange            = 100e-3;    % [V] Range over which the amplifier is linear
+        %% Properties of the amplifier and ADC converter.
+        % amplifierLinearRange is the output-referred linear range of the
+        % amplifier. The input-referred range is amplifierLinearRange /
+        % amplifierGain.
+        amplifierGain             = 1;         % Preamp gain.
+        amplifierLinearRange      = 100e-3;    % [V] Output-referred linear range
         adcNonlinearity           = 100;       % The saturation profile of the amplifier near the edge
         %                                       of the linear range. 2 = very sigmoidal, 100 = linear inside the range,
         %                                       saturation outside (i.e. piecewise linear). See amplify
         adcRange                  = 100e-3;     % The range of the ADC; bits are distributed evenly across this +/- range.
         adcBitDepth               = 24;       % Number of bits in the ADC
-        
 
-        highPass                  = 0;        % [Hz] Highpass cutoff of the pre-amplification hardware filter.
-        lowPass                   = 0;        % [Hz] lowpass cutoff of the post-amplification, post-digitization filter.
+
+        highPass                  = 0;        % [Hz] Analog highpass cutoff before amplification.
+        lowPass                   = 0;        % [Hz] Analog anti-alias lowpass cutoff before the ADC.
+        digitalLowPass            = 0;        % [Hz] Optional lowpass cutoff after ADC quantization.
     end
     properties (SetAccess= protected, GetAccess=public)
         tSimulate;  % The internal time of simulation
@@ -196,8 +198,9 @@ classdef artSim < handle
             displayGroup('Background noise', ...
                 {'additive','pinkNoise','multiplicative'});
             displayGroup('ADC and recording filters', ...
-                {'adcLinearRange','adcNonlinearity','adcRange', ...
-                'adcBitDepth','amplifierGain','highPass','lowPass'});
+                {'amplifierLinearRange','adcNonlinearity','adcRange', ...
+                'adcBitDepth','amplifierGain','highPass','lowPass', ...
+                'digitalLowPass'});
 
             function displayGroup(title,names)
                 fprintf('\n%s:\n',title);
@@ -284,7 +287,7 @@ classdef artSim < handle
                 o (1,1) artSim
                 src  % The EEGLAB EEG struct or a Fieldtrip data struct, or a matrix of doubles with samples along the first dimension, channels along the second
                 pv.format (1,1) string {mustBeMember(pv.format,["EEGLAB" "FIELDTRIP" "RAW"])} = "EEGLAB";
-                pv.channel (1,:) =1 % Which channel(s) to use from a multichannel dataset (will be averaged)                
+                pv.channel (1,:) =1 % Which channel(s) to use from a multichannel dataset (will be averaged)
             end
             switch pv.format
                 case "EEGLAB"
@@ -308,7 +311,7 @@ classdef artSim < handle
                     % o.recordingSamplingRate
                     [nrSmples,nrChnls] = size(src); %#ok<ASGLU>
                     assert(nrSmples==o.recordingSamplingRate*o.duration,"The number of samples in this array (%d) does not match o.recordingSamplingRate*o.duration (%d)",nrSmples,o.recordingSamplingRate*o.duration);
-                    data = src;                    
+                    data = src;
             end
             data = mean(data,2,"omitmissing"); % Average over channels
             % Fill missing  with linear interpolation (to avoid having nans)
@@ -316,7 +319,7 @@ classdef artSim < handle
             % Upsample to quasi continuous sampling rate to match the simulated data
             o.lfp = resample(data,o.quasiContinuousSamplingRate, o.recordingSamplingRate);
             o.lfp = o.lfp -mean(o.lfp,1,"omitmissing");
-            o.fromData = true;            
+            o.fromData = true;
         end
 
         function sim(o)
@@ -328,7 +331,7 @@ classdef artSim < handle
             o.simTCS;           % 3. Generate the TCS voltage
             o.simRecording;     % 4. Simulate recording
         end
-        
+
         function simLfp(o)
             % simLfp - Simulate the Local Field Potential
             % LFPs can be single sinusoids (lfpPeakWidth =0) with
@@ -548,7 +551,7 @@ classdef artSim < handle
             % tacsFrequency   - Frequency of stimulation [Hz]
             % tacsPhaseOffset     - Phase at time 0. [rad]
             % tacsShape    - sine,sawtooth, square, am
-            % tacsCarrierFrequency  - Carrier frequency of the amplitude-modulated tACS 
+            % tacsCarrierFrequency  - Carrier frequency of the amplitude-modulated tACS
             % tdcsMean   -  Mean current [A]
             % tcsRamp   - Duration of a ramp [s]
             %
@@ -584,7 +587,7 @@ classdef artSim < handle
                 case 'NONE'
                     virtualOutputCurrent = zeros(size(o.tTcs));
                 case 'AM'
-                    % Amplitude modulated sinusoidal tACS                    
+                    % Amplitude modulated sinusoidal tACS
                     virtualOutputCurrent = o.tacsAmplitude*(0.5*sin(2*pi*o.tacsFrequency*o.tTcs+o.tacsPhaseOffset)+0.5).*sin(2*pi*o.tacsCarrierFrequency*o.tTcs);
                 otherwise
                     error('Unknown tACS shape %s',o.tacsShape);
@@ -701,60 +704,40 @@ classdef artSim < handle
                 pv.graph (1,1) logical =false
                 pv.showTime (1,1) double = 2
             end
+            
+            %% Record the TCS signal coming from the stimulator.
+            % Assume a linear amplifier ; only downsampling (includes
+            % anti-aliasing filter in decimate).
+            o.vRecordTcs = decimate(o.vTcsActual,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
 
-            % Store the recorded vTcs assuming a linear amplifier, with an
-            % optional highpass and lowpass filter
-            if o.highPass >0
-                highPassFiltered  = highpass(o.vTcsActual,o.highPass,o.quasiContinuousSamplingRate);
-            else
-                highPassFiltered = o.vTcsActual;
-            end
-            o.vRecordTcs = decimate(highPassFiltered,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
-            if o.lowPass >0
-                o.vRecordTcs = lowpass(o.vRecordTcs ,o.lowPass,o.recordingSamplingRate);
-            end
-
-            %Add artifact, neural signal, and noise
-            if o.pinkNoise
-                additiveNoise= o.additive*coloredNoise(nrTimePoints=o.nrTimePoints,alpha=1);
-            else
-                additiveNoise = o.additive*randn(o.nrTimePoints,1);
-            end
-            multiplicativeNoise = 1+o.multiplicative.*randn(o.nrTimePoints,1);
-            recV = nan(o.nrSamples,2);
-            for i=1:2  % Electrode(2)  and neighbor (1)
+            % Create 4 recorded signals; one for the recording electrode,
+            % one for a neighboring electrode, both with and without tCS.
+            for i=1:2  % neighbor (1), electrode(2)
                 if i==1
                     simV = o.vNeuralNeighbor;
                 else
                     simV = o.vNeural;
                 end
-                % Create two signals; 1 -> without tacs (.vTruth), 2-> with tACS
-                simV = simV +additiveNoise + [zeros(size(simV)) o.vTcsActual.*multiplicativeNoise];
-
-                % The recording hardware will filter this quasi continouous
-                % signal before amplification/sampling. Here we model a
-                % high pass hardware filter and an anti-aliasing filter (inside decimate).
-                for j=1:size(simV,2)
-                    if o.highPass >0
-                        highPassFiltered  = highpass(simV(:,j),o.highPass,o.quasiContinuousSamplingRate);
-                    else
-                        highPassFiltered  = simV(:,j);
-                    end
-                    recV(:,j) = decimate(highPassFiltered,o.quasiContinuousSamplingRate/o.recordingSamplingRate);
-                end
-                % Amplification
-                [amplifiedV] = artSim.amplify(recV,o.adcLinearRange,o.adcNonlinearity,o.amplifierGain);
-                % Sampling  (assuming round to nearest bit)
-                amplifiedV = min(max(amplifiedV,-o.adcRange),o.adcRange);
-                recV = o.adcVoltsPerBit*round(amplifiedV./o.adcVoltsPerBit);
-                recV = min(max(recV,-o.adcRange),o.adcRange);
-                if o.lowPass >0
-                    recV = lowpass(recV,o.lowPass,o.recordingSamplingRate);
-                end
-                if i==1
-                    o.vRecordNeighbor = recV;
+                % Additive noise
+                if o.pinkNoise
+                    additiveNoise= o.additive*coloredNoise(nrTimePoints=o.nrTimePoints,alpha=1);
                 else
-                    o.vRecord = recV;
+                    additiveNoise = o.additive*randn(o.nrTimePoints,1);
+                end
+                simV = simV + additiveNoise;                
+                simV = simV.*(1+o.multiplicative.*randn(o.nrTimePoints,1));
+
+                for j=1:2  % 1 -> without tacs (.vTruth), 2-> with tACS
+                    if j==2
+                        simV = simV +o.vTcsActual.*(1+o.multiplicative.*randn(o.nrTimePoints,1)); % Add the actual tcs signal
+                    end
+                    % Simulate the preamp/amp/post-amp filter chain
+                    recV = adc(o,simV);
+                    if i==1
+                        o.vRecordNeighbor(:,j) = recV;
+                    else
+                        o.vRecord(:,j) = recV;
+                    end
                 end
             end
 
@@ -787,7 +770,8 @@ classdef artSim < handle
                         ax = axes('Position',[.8 .7 .1 .1]);
                         % Show inset with amplification profile plus saturation range.
                         x = min(o.vTcsActual(:)):1e-6:max(o.vTcsActual(:));
-                        [y,satPoint]= artSim.amplify(x,o.adcLinearRange,o.adcNonlinearity,o.amplifierGain,satLevel=99);
+                        amplifierInputRange = o.amplifierLinearRange/o.amplifierGain;
+                        [y,satPoint]= artSim.amplify(x,amplifierInputRange,o.adcNonlinearity,o.amplifierGain,satLevel=99);
                         plot(ax,x/1e-3,y/1e-3);
                         hold on
                         plot(satPoint*[1e3 1e3],ylim)
@@ -799,8 +783,53 @@ classdef artSim < handle
             end
 
         end
-       
-      
+
+        function [v,saturationPoint] = adc(o,v,pv)
+            % Take a quasi continuous signal and simulate the preamp, amp,
+            % post-amp filtering stages
+            arguments
+                o (1,1) artSim
+                v (:,1) double
+                pv.satLevel (1,1) double = 99;
+                pv.isTimeSeries (1,1) logical = true;
+            end
+
+            if o.highPass >0 && pv.isTimeSeries
+                highPassFiltered  = highpass(v,o.highPass,o.quasiContinuousSamplingRate);
+            else
+                highPassFiltered  = v;
+            end
+            % Analog preamplifier gain
+            amplifierInputRange = o.amplifierLinearRange/o.amplifierGain;
+            [amplifiedV,saturationPoint] = artSim.amplify(highPassFiltered, ...
+                amplifierInputRange,o.adcNonlinearity,o.amplifierGain,satLevel=pv.satLevel);
+            % Analog anti-alias filter before sampling.
+            if o.lowPass >0 && pv.isTimeSeries
+                amplifiedV = lowpass(amplifiedV,o.lowPass, ...
+                    o.quasiContinuousSamplingRate);
+            end
+            % Sampling
+            if pv.isTimeSeries
+                if o.lowPass >0
+                    sampledV = downsample(amplifiedV, ...
+                        o.quasiContinuousSamplingRate/o.recordingSamplingRate);
+                else
+                    % decimate supplies the anti-aliasing filter when lowPass is zero.
+                    sampledV = decimate(amplifiedV, ...
+                        o.quasiContinuousSamplingRate/o.recordingSamplingRate);
+                end
+            else
+                sampledV = amplifiedV;
+            end
+            sampledV = min(max(sampledV,-o.adcRange),o.adcRange);
+            % ADC quantization.
+            v = o.adcVoltsPerBit *round(sampledV./o.adcVoltsPerBit);
+            % Optional digital filter after ADC quantization.
+            if o.digitalLowPass >0 && pv.isTimeSeries
+                v = lowpass(v,o.digitalLowPass, o.recordingSamplingRate);
+            end
+        end
+
         function [results,spikes] = sortSpikes(o, vClean,pv)
             % [results,spikes] = sortSpikes(o, vClean,pv)
             % Simulate a typical spike sorting pipelinw.

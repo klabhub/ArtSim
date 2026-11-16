@@ -15,7 +15,7 @@ defaults.adcLinearRange            = 6.8e-3;   % Linear range of amplified 6.8 m
 defaults.adcNonlinearity           = 100;      % Piecewise linear
 defaults.adcRange                  = 10e-3;     % Input range of the ADC.
 defaults.adcBitDepth               = 16;       % Number of bits in the AD convertor
-defaults.adcGain                   = 20;       % Amplify 20x
+defaults.amplifierGain             = 20;       % Preamplifier gain
 defaults.highPass                  = 0.01;     % High pass filter on the preamp. 
 defaults.reproducible              = 2;       % Seed the RNG to get reproducible results
 %[text] Define the common neural signals

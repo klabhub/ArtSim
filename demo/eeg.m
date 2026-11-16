@@ -17,7 +17,7 @@ defaults.adcLinearRange            = 200e-3;  % [V] Range over which the amplifi
 defaults.adcNonlinearity           = 100;     % linear inside the range,saturation outside
 defaults.adcRange                  = 200e-3;  % The range of the ADC; bits are distributed evenly across this +/- range.
 defaults.adcBitDepth               = 24;      % Number of bits in the ADC
-defaults.adcGain                    = 1;      % Amplifier gain
+defaults.amplifierGain              = 1;      % Preamplifier gain
 
 
 defaults.highPass                  = 0.01;    % Analog filter of the recording amplifier
