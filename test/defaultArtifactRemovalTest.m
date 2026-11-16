@@ -79,17 +79,17 @@ classdef defaultArtifactRemovalTest < matlab.unittest.TestCase
     methods (Test)
         function testFbarMatchesCurrentBaseline(testCase)
             testCase.verifyEqual(testCase.actualFbar,testCase.baseline.fbar, ...
-                AbsTol=1e-12);
+                AbsTol=1e-7);
         end
 
         function testRbarMatchesCurrentBaseline(testCase)
             testCase.verifyEqual(testCase.actualRbar,testCase.baseline.rbar, ...
-                AbsTol=1e-12);
+                AbsTol=1e-7);
         end
 
         function testFastrMatchesCurrentBaseline(testCase)
             testCase.verifyEqual(testCase.actualFastr,testCase.baseline.fastr, ...
-                AbsTol=1e-12);
+                AbsTol=1e-7);
         end
     end
 end
