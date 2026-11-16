@@ -10,7 +10,7 @@ function [r,mse] = qc(x,truth,tacsFreq,sf)
 % sf - Sampling frequency of x and truth  [NaN].
 % OUTPUT
 % r = Pearson correlation between signal and truth
-% mse = Mean squared error difference between signal and truth  in muV.
+% mse = square root of the median squared error, in µV.
 
 arguments
     x double 

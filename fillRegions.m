@@ -1,6 +1,6 @@
 function [filled,nrInRegion,startRegionIx,stopRegionIx] = fillRegions(vec, fillIn)
 % For a vector of logicals, fill in regions with the value true if the
-% number of elements between them is less than fillIn (in Hz). 
+% number of elements between them is less than fillIn. 
 % Returns the filled vector, the number of elements in each region and the
 % start and stop indices of all the true-regions.
 arguments

@@ -3,7 +3,7 @@ function results = analyzeEEG(o,ar,pv)
 % signals that are recovered with artifact removal.
 arguments
     o (1,1)                         artSim % The artSim object that simulated the signals and artifacts
-    ar    (1,1) struct                  % The recovered signals (results output from artifactRecovery output).
+    ar    (1,1) struct                  % The recovered signals (results output from artifactRemoval.m  output).
     pv.freqRes (1,1) double         = 1
     pv.highCutOff (1,1) double      = 35 % Hz
     pv.lowCutOff (1,1) double       = 1 % Hz

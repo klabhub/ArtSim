@@ -2,7 +2,7 @@
 %[text] This script uses ArtSim's option to load data (from a Fieldtrip or EEGLAB data structure) and investigates whether (simulated) tACS can be removed and the true underlying signals recovered. 
 %[text] Specifically, I used 4 minutes of (eyes open) resting state activity recorded at electrodes near Oz.  In these data the 1/f decay rate as well as the strength of the alpha rhythm varies considerably across participants. 
 %[text] The simulated tACS signal applies a 1 mA current at 10 Hz  that results in a 15 mV artifact in the EEG signal.
-%[text] I then apply the three artifiact removal algorithms and compute the residual artifact (expressed as the percent error in the estimated power) near 10 Hz (directly affected by tACS) and near 5 Hz (control frequency).
+%[text] I then apply the three artifact removal algorithms and compute the residual artifact (expressed as the percent error in the estimated power) near 10 Hz (directly affected by tACS) and near 5 Hz (control frequency).
 %[text] %[text:anchor:H_D32E8D0B] ## Setup Simulation
 %[text] First define the stimulation and recording parameters.
 run('../startup'); % Make sure all toolboxes are on the path
@@ -19,7 +19,7 @@ defaults.duration                   = 4*60;   % 4 min of data
 defaults.tacsAmplitude              = 1e-3;    % 1 mA 
 defaults.resistance                 = 15;     % 15 mV artifact per mA current
 defaults.tacsFrequency              = 10;      % 10 Hz tACS
-%[text] And setup the base parameters for artifiact removal
+%[text] And set up the base parameters for artifact removal
 ar = [];
 ar.recordingSamplingRate = defaults.recordingSamplingRate; % Match to the recording
 ar.segmentDuration       = 3;
