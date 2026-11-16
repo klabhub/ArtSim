@@ -1,4 +1,4 @@
-function [sortResults,falsePositives,falseNegatives,spikes,vRecovered] = analyzeSpikes(o,ar,pv)
+function [sortResults,falsePositives,falseNegatives,spikes] = analyzeSpikes(o,ar,pv)
             % Helper function to run the simulation, recording and artifact correction
             % and show the results for an single unit recording experiment. See
             % spikeArtifacts.mlx for examples.

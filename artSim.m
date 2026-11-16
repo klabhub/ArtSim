@@ -743,7 +743,7 @@ classdef artSim < handle
 
             %% Summarize the results
             if pv.graph
-                range = [prctile(amplifiedV,0.05) ; prctile(amplifiedV,99.5)]/1e-3;
+                range = prctile(o.vRecord,[0.5 99.5])/1e-3;
                 bit = o.vRecord/o.adcVoltsPerBit;
                 headroom = (2.^o.adcBitDepth-1) - max(abs(bit),[],1);
 
