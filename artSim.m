@@ -46,7 +46,7 @@ classdef artSim < handle
         spikePeak                 = 0;        % [V] Peak of the action potential
         spikePeakVariation        = 0;        % Spikes are scaled by 1+randn*spikePeakVariation.
         spikeRate                 = 0;        % [Hz] Firing rate
-        poisson                   = true;     % Set to true to generate spike times with a Poission distribution .
+        poisson                   = true;     % Set to true to generate spike times with a Poisson distribution.
         % When false, spike times are drawn from a flat distribution.
         fixNrSpikes               = false;    % Fix the number of spikes to match the rate. (see simSpikes)
         refractoryPeriod          = 1.5e-3;   % [s] Refractory period
@@ -59,9 +59,9 @@ classdef artSim < handle
         lfpPhaseOffset            = 0;        % [rad]
         lfpFrequency              = 0;        % [Hz] Frequency of an intrinsic oscillation
         lfpPeakWidth              = 0;        % [Hz] Standard deviation of the amplitude distribution for a collection of LFPs with random phases.
-        preferredPhase            = 0;        % [Rad] Phase at which spikes occur preferentially (if syncrony>0)
+        preferredPhase            = 0;        % [Rad] Phase at which spikes occur preferentially (if synchrony>0)
 
-        %% Background actvity/noise
+        %% Background activity/noise
         additive                  = 0;        % [V]  Standard deviation of additive noise
         pinkNoise                 = true;     % Set to true to generate pink noise (white otherwise)
         multiplicative            = 0;        % Standard deviation of the multiplicative noise
@@ -81,6 +81,8 @@ classdef artSim < handle
 
         highPass                  = 0;        % [Hz] Analog highpass cutoff before amplification.
         lowPass                   = 0;        % [Hz] Analog anti-alias lowpass cutoff before the ADC.
+                                              % If this is zero, a built-in antialiasing filter is used
+                                              % before downsampling to the recording sampling rate.
         digitalLowPass            = 0;        % [Hz] Optional lowpass cutoff after ADC quantization.
     end
     properties (SetAccess= protected, GetAccess=public)
@@ -98,8 +100,8 @@ classdef artSim < handle
 
     properties (Dependent)
         tTcs       % The time of each stimulator sample
-        nrSamples;  % The number of simulated recorded samples
-        nrTimePoints; % The number of simulated time points
+        nrSamples;  % The number of simulated recorded samples (at recordingSamplingRate)
+        nrTimePoints; % The number of simulated time points ( at quasiContinuousSamplingRate)
         phaseLfp;   % The phase of the LFP at each time point.
         vNeural;    % The neural voltage trace (spikes + lfp)
         vNeuralNeighbor   % The neural voltage trace at a neighboring electrode.
@@ -422,7 +424,7 @@ classdef artSim < handle
             % OPTIONAL Input parameters
             % kappa - Spike shape parameter representing the initial rise [5]
             % tau   - spike shape parameter representing the decay [5e-4]
-            % graph  - generate a graph [true]
+            % graph  - generate a graph [false]
             % showTime  - limit the graph to the first n seconds of the stimulation [2]
             %
             % COMPUTES:
@@ -685,7 +687,7 @@ classdef artSim < handle
             % the combination of a stimulation artifact and neural signals.
             %
             % OPTIONAL EXTRA PARM/VALUE PAIRS
-            % graph - Show a graph  [true]
+            % graph - Show a graph  [false]
             % showTime - limit graph to the first seconds [2]
             %
             % COMPUTES
@@ -866,7 +868,7 @@ classdef artSim < handle
                 o (1,1) artSim
                 vClean (:,1) double
                 pv.threshold (1,1) double =3.5
-                pv.sharedThreshold (1,1) logical = false
+                pv.sharedThreshold (1,1) logical = true
                 pv.sortMode (1,1) string {mustBeMember(pv.sortMode,["MATCHSHAM","MOSTSPIKES" "ALL" ])} = "MATCHSHAM"
                 pv.spikeBand (1,2) double = [300 7000]
                 pv.filterOrder (1,1) double = 3

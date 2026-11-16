@@ -1,6 +1,6 @@
 function [results] = artifactRemoval(v,step,common)
 % This function performs one or more artifact removal steps on a voltage v
-% and returns the cleaned signal in results.vClean. 
+% and returns the cleaned signal in results.signal. 
 %
 % The steps can be any combination of the following: (more details per step below)
 % 'NOP' - no artifact removal. 
@@ -91,7 +91,7 @@ function [results] = artifactRemoval(v,step,common)
 %   'ancMu' -  the step size of the ANC [0.05]
 %   'ancOnline' - Whether to use online ANC filter estimates, or to
 %   estimate the ANC filter based on the entire signal, then apply the
-%   final estimate to all sapmples. [false].  (See anc.m for details)
+%   final estimate to all samples. [false].  (See anc.m for details)
 %   For FASTR mode, setting ancOnline to false implies that ANC will not be
 %   applied at all (it can only do the "online" variant).
 %
@@ -103,7 +103,7 @@ function [results] = artifactRemoval(v,step,common)
 %   'ancMu','ancOnline'  - see above.
 %% Mode: ANC-REFERENCE
 %  With this mode the user can specif their own noise reference and use ANC to
-%  remvove aspects of the signal that correlate with the noise reference.
+%  remove aspects of the signal that correlate with the noise reference.
 % OPTIONS:
 %  'ancReference', A vector representing the noise [nrSamples 1];
 %   'ancN'  , the number of filter coefficients to use for ANC.

@@ -1,14 +1,14 @@
 function z = zHeartbeat(o,filename,samplingRate)
     % Read heartbeat from a recording in the MIT-BIH dataset 
     % https://physionet.org/content/mitdb/1.0.0/
-    % and return the impedance to use at eacht timepoint of an ArtSim
+    % and return the impedance to use at each timepoint of an ArtSim
     % simulation.
     %
     % The example data set (MIT_BIH_100.csv) has two leads,
     % was recorded at 360 samples/s from a person with a heartbeat of ~ 75 bpm.
     % This function uses the MLII lead.
     %
-    % This function models the balistocardiac effect as a delayed, damped 
+    % This function models the ballistocardiac effect as a delayed, damped 
     % sinusoid induced by the ventricular contraction (R-wave in the ECG). 
     % 
     % The output (a factor to scale the impedance) has a mean of 1 and a

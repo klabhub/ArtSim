@@ -3,7 +3,7 @@ function [signal,time] = coloredNoise(pv)
 % and with a specified drop off of the power spectrum with frequency.
 % 
 % Pink Noise (power ~1/f):
-% pn = coloredNoise(nrSamples = 10000,samplingRate =1e3, alpha=1)
+% pn = coloredNoise(nrTimePoints = 10000,samplingRate =1e3, alpha=1)
 arguments
     pv.nrTimePoints (1,1) double {mustBeInteger, mustBeNonnegative} = 1000
     pv.samplingRate (1,1) double {mustBeNonnegative} = 1
