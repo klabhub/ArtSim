@@ -15,14 +15,12 @@ arguments
                                    0.3010 0.7450 0.9330
                                    0.4940 0.1840 0.5560
                                    0.8500 0.3250 0.0980]
-    pv.span = {}
+    pv.span = {}   
+    pv.fontSize = 6;
+    pv.fontName = 'Arial';
+    pv.lineWidth = 1;
+    pv.dx = 1; % Number of expected chars on the yticklabels (used to left shift the subplot labels)
 end
-
-
-%% Set Defaults
-set(groot,'defaultAxesFontSize',6)
-set(groot,'defaultAxesFontName','Arial');
-set(groot,'defaultAxesLineWidth',1);
 
 
 %% Find or create the figure
@@ -68,26 +66,44 @@ for i =1:nrSubs
         ax(i)=nexttile(pv.span{i}(1),pv.span{i}(2:3));
     end
     cla(ax(i));
-    set(ax(i),'ColorOrder',pv.colorOrder);
+    set(ax(i), ...
+        'ColorOrder',pv.colorOrder, ...
+        'FontSize',pv.fontSize, ...
+        'LabelFontSizeMultiplier',1, ...
+        'TitleFontSizeMultiplier',1);
     hold on;
 end
 
 if isempty(pv.span)
 ax = reshape(ax,[pv.nrCols pv.nrRows])';
 end
-% Create labels
-for i=1:nrSubs
-    if nrSubs>1
-        if pv.byColumn
-            tmpAx= ax'; % Label first colum a ,b,c etc.
-        else
-            tmpAx = ax; % Label first row a,b,c
-        end
-        thisPos = tmpAx(i).Position;
-        thisPos(1) = max(0,thisPos(1) - 0.35*thisPos(3));
-        thisPos(2) = thisPos(2) + 0.95*thisPos(4);
-        thisPos(3) = 0.1;
-        thisPos(4) = 0.1;
-        annotation('textbox',thisPos,'String',[char('a'+i-1) ')'],'Linestyle','none','FontName',get(groot,'defaultAxesFontName'))
+% Create labels to the left of each axes, centered at ylabel height.
+if nrSubs > 1
+    if pv.byColumn
+        labelAxes = ax';
+    else
+        labelAxes = ax;
+    end
+
+    for i = 1:nrSubs
+        yLabel = labelAxes(i).YLabel;
+        yLabel.Units = "normalized";
+        hTmp1 = plot(labelAxes(i),0:0.1:10^(pv.dx-1));
+        hTmp2 = ylabel(labelAxes(i),"BlaBlaBla");       
+        
+          % Align the subplot label with the estimated left edge of the ylabel.
+        labelX = hTmp2.Position(1) - hTmp2.Extent(3);
+        delete([hTmp1 hTmp2]);
+
+      
+        text(labelAxes(i), labelX, 1, ...
+            string(char('a' + i - 1)) + ")", ...
+            Units="normalized", ...
+            HorizontalAlignment="left", ...
+            VerticalAlignment="bottom", ...
+            Clipping="off", ...
+            Interpreter="none", ...
+            FontName=pv.fontName, ...
+            FontSize=pv.fontSize);
     end
 end

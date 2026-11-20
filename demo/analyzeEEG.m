@@ -4,13 +4,14 @@ function results = analyzeEEG(o,ar,pv)
 arguments
     o (1,1)                         artSim % The artSim object that simulated the signals and artifacts
     ar    (1,1) struct                  % The recovered signals (results output from artifactRemoval.m  output).
-    pv.freqRes (1,1) double         = 1
+    pv.freqRes (1,1) double         = 0.1
+    pv.forbidden (1,2) double         =[0 0];  % Ignore signals in this frequency band
     pv.highCutOff (1,1) double      = 35 % Hz
     pv.lowCutOff (1,1) double       = 1 % Hz
     pv.tag (1,1) string             = ""
     pv.exportFig (1,1) logical      = false
     pv.errorThreshold (1,1) double  = 1 % More than 1% error is "forbidden".
-    pv.amplitudeThreshold (1,1) double =0.1e-6 % Ignore frequencies with amplitudes less than this [V].
+    pv.amplitudeThreshold (1,1) double =0;%.1e-6 % Ignore frequencies with amplitudes less than this [V].
     pv.fillHz (1,1) double          = 1;
     pv.axs  = NaN
     pv.tlim = [0 0.1] + mean(o.tRecord);
@@ -30,12 +31,11 @@ pctError = 100*(results.mismatch)./amplitude(:,1);
 % Ignore frequencies where the signal is below the amplitudeThreshold
 % to avoid large pctError for empty frequency bins
 hasSignal = amplitude(:,2)> pv.amplitudeThreshold;
-pctError(~hasSignal) = NaN;
-meanPctError = mean(abs(pctError),"omitmissing");
+isForbidden = frequency>=pv.forbidden(1) & frequency<=pv.forbidden(2);
 results.amplitude = amplitude;
 results.pctError = pctError;
 results.frequency = frequency;
-results.meanPctError  = meanPctError;
+results.relativeError  = prctile(abs(pctError(hasSignal & ~isForbidden)),95); % Relative Error
 
 %% Determine the forbidden zones in the spectrum
 nrToFill = pv.fillHz/(results.frequency(3)-results.frequency(2)) ;
@@ -58,7 +58,7 @@ else
 end
 
 if iscell(ar.step)
-    stepNames = cellfun(@(x) x.name,ar.step,'UniformOutput',false);
+    stepNames = cellfun(@(x) string(x.name),ar.step,'UniformOutput',true);
 else
     stepNames = {ar.step.name};
 end
@@ -80,7 +80,7 @@ if ~isempty(pv.axs)
         y = y - mean(y);
         x = o.tRecord(tStay)-pv.tlim(1);
         h = plot(x,y,'LineWidth',1,'LineStyle','-');
-        ylabel 'Amplitude (\muV)'
+        ylabel 'Ampl. (\muV)'
         ax =gca;
         ax.YColor ='k';
         hold on
@@ -101,7 +101,7 @@ if ~isempty(pv.axs)
         ax =gca;
         ax.YColor ='b';
         xlabel 'Time (s)'
-        ylabel 'Amplitude (\muV)'
+        ylabel 'Ampl. (\muV)'
 
     end
     if  numel(axs)>=2 && isgraphics(axs(2))
@@ -110,7 +110,7 @@ if ~isempty(pv.axs)
         x = frequency;
         y= amplitude(:,[1 2])./1e-6;
         h = plot(x(1:10:end),y(1:10:end,:),'LineWidth',1,'LineStyle','-');
-        ylabel 'Amplitude (\muV)'
+        ylabel 'Ampl. (\muV)'
         hold on
         ax =gca;
         ax.YScale = 'Log';
@@ -132,13 +132,14 @@ if ~isempty(pv.axs)
         ax.YColor ='b';
         set(gca,'XScale','Linear','XLim',[pv.lowCutOff pv.highCutOff]);
         xlabel 'Frequency (Hz)'
-        ylabel 'Amplitude (\muV)'
+        ylabel 'Ampl. (\muV)'
     end
     if  numel(axs)>=3 && isgraphics(axs(3))
         axes(axs(3)); % Error as a percentage
         if pv.showErrorMuv
             yyaxis left
         end
+        pctError(frequency==0) = 0;
         plot(frequency,pctError,'LineWidth',1,'Color','k');
         xlabel 'Frequency (Hz)'
         ylabel 'Error (%)'
@@ -148,7 +149,9 @@ if ~isempty(pv.axs)
         plot(xlim,zeros(1,2),'k-')
         if pv.showErrorMuv
             yyaxis right
-            plot(frequency,results.mismatch/1e-6,'LineWidth',1,'Color','m')
+            y = results.mismatch/1e-6;
+            y(frequency==0) =0;
+            plot(frequency,y,'LineWidth',1,'Color','m')
             set(gca,'YScale','Linear','YColor','m');
             ylabel 'Error (\muV)'
             ylim([-1 1]*max(abs(ylim)))
