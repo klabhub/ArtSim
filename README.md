@@ -4,7 +4,7 @@ A MATLAB toolbox for simulating and eliminating artifacts caused by electrical s
 
 The companion publication (under review) provides background, interpretation, and illustrative example simulations:
 
-***Artifact correction for transcranial current stimulation. Bart Krekelberg, 2025.***
+***ArtSim: Open-source software for evaluating artifact correction in EEG, LFP, and spike recordings acquired with transcranial current stimulation. Bart Krekelberg, 2026.***
 
 *Bart Krekelberg, Rutgers University - Newark, 2025.*
 [https://vision.rutgers.edu](vision.rutgers.edu)
@@ -28,7 +28,7 @@ Then open one of the LiveScripts in the `demo` folder that produce the main anal
 - `eeg.m` - Analysis of common stimulation artifacts in EEG or LFP recordings.
 - `spikes.x`  - Analysis of common stimulation artifacts in single-unit spike recordings.
 
-The other LIvescripts provide a deeper dive into some parameter dependencies:
+The other Livescripts provide a deeper dive into some parameter dependencies:
 
 - `eegExploration.m`
 - `spikesExploration.m`
@@ -38,7 +38,7 @@ or they explore other issues associated with TCS artifacts:
 - `movingAverage.m`   - Comb artifacts resulting from moving average templates
 - `synchrony.m`       - A closer look at the statistical analysis of spike entrainment
 
-The `restingState.m` file shows an example application of the toolbox to real EEG data obtained.
+The `restingState.m` file shows an example application of the toolbox to resting state EEG data.
 
 ## Funding
 
